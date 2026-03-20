@@ -231,7 +231,10 @@
     'use strict';
 
     const params = new URLSearchParams(window.location.search);
-    const backendOrigin = (params.get('backend') || 'http://127.0.0.1:5051').replace(/\/$/, '');
+    const _defaultBackend = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? 'http://127.0.0.1:5051'
+      : window.location.origin;
+    const backendOrigin = (params.get('backend') || _defaultBackend).replace(/\/$/, '');
 
     const MAX_GAMMA = 1400;
     const GAMMA_WINDOW_M = 400;
