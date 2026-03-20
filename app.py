@@ -22,7 +22,16 @@ socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 # ── Database ──────────────────────────────────────────────────────────────────────────────
 # In packaged desktop installs, app folder can be read-only (e.g., Program Files).
 # Use EDR_DATA_DIR when provided by launcher; fallback to script folder for dev runs.
-APP_BASE_DIR = os.environ.get('EDR_DATA_DIR') or os.path.dirname(__file__)
+# For cloud deploys without persistent disk, use local temp directory.
+def _get_data_dir():
+    candidate = os.environ.get('EDR_DATA_DIR') or os.path.dirname(__file__)
+    try:
+        os.makedirs(os.path.join(candidate, 'backups'), exist_ok=True)
+        return candidate
+    except (PermissionError, OSError):
+        return os.path.dirname(__file__)
+
+APP_BASE_DIR = _get_data_dir()
 DB_PATH      = os.path.join(APP_BASE_DIR, 'edr_log.db')
 BACKUP_DIR   = os.path.join(APP_BASE_DIR, 'backups')
 BACKUP_KEEP = 24          # keep last 24 backup files (~2 hours at 5-min interval)
@@ -1017,5 +1026,5 @@ if __name__ == '__main__':
     tb.start()
     _start_tcp(_config['tcp_port'])
     _start_simulator()
-    port_env = os.environ.get('EDR_PORT', '5051')
+    port_env = os.environ.get('PORT') or os.environ.get('EDR_PORT', '5051')
     socketio.run(app, host='0.0.0.0', port=int(port_env), debug=False)
