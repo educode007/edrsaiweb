@@ -1027,4 +1027,4 @@ if __name__ == '__main__':
     _start_tcp(_config['tcp_port'])
     _start_simulator()
     port_env = os.environ.get('PORT') or os.environ.get('EDR_PORT', '5051')
-    socketio.run(app, host='0.0.0.0', port=int(port_env), debug=False)
+    socketio.run(app, host='0.0.0.0', port=int(port_env), debug=False, allow_unsafe_werkzeug=True)
