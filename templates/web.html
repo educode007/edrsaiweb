@@ -159,6 +159,55 @@
       .box-val { font-size: 26px; }
       .center-title { font-size: 28px; }
     }
+
+    @media (max-width: 600px) {
+      .hdr { height: 48px; padding: 0 8px; }
+      .logo { font-size: 14px; }
+      .nav-link { font-size: 11px; padding: 3px 6px; }
+      .status { font-size: 11px; gap: 5px; }
+      #clock { display: none; }
+
+      .page {
+        height: auto;
+        min-height: calc(100vh - 48px);
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        gap: 6px;
+        padding: 6px;
+      }
+
+      /* Gamma chart: altura fija cómoda en móvil */
+      .page > section:first-child {
+        height: 280px;
+      }
+      .chart-wrap { min-height: 0; height: calc(100% - 36px); }
+
+      /* Ocultar hints de teclado en touch */
+      .gamma-hint { display: none; }
+      .gamma-btn { padding: 3px 10px; font-size: 12px; }
+
+      /* Compass más cuadrado en móvil */
+      .compass-layout {
+        height: auto;
+        padding: 6px;
+        gap: 6px;
+      }
+      .compass-wrap {
+        min-height: 0;
+        height: 56vw;
+        max-height: 320px;
+      }
+
+      /* Valores numéricos más grandes para lectura fácil */
+      .box-val { font-size: 34px; }
+      .box-label { font-size: 12px; }
+      .box-time { font-size: 11px; }
+      .center-title { font-size: 32px; }
+      .center-sub { font-size: 14px; }
+
+      /* Box row con más padding para touch */
+      .box { padding: 8px 10px; }
+    }
   </style>
 </head>
 <body>
