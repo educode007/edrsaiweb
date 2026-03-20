@@ -431,9 +431,20 @@
 
       const last = gammaSeries.length ? gammaSeries[gammaSeries.length - 1] : null;
       if (last) {
-        const sameDepth = Math.abs(last.depth - d) < 0.05;
-        const sameGamma = Math.abs(last.gamma - g) < 0.2;
-        if (sameDepth && sameGamma) return;
+        // Reset de pozo: profundidad cayó más de 50m respecto al máximo registrado
+        const maxDepth = Math.max(...gammaSeries.map(p => p.depth));
+        if (maxDepth - d > 50) {
+          gammaSeries.splice(0, gammaSeries.length);
+          tfaTrail.splice(0, tfaTrail.length);
+          lastTfaSampleKey = null;
+          lastGammaTs = null;
+          lastGammaFallbackKey = null;
+          gammaView.enabled = false;
+        } else {
+          const sameDepth = Math.abs(last.depth - d) < 0.05;
+          const sameGamma = Math.abs(last.gamma - g) < 0.2;
+          if (sameDepth && sameGamma) return;
+        }
       }
 
       gammaSeries.push({ depth: d, gamma: g });
