@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EDR SAI — Web Compass</title>
+  <style>
+    :root {
+      --bg: #ececec;
+      --panel: #ffffff;
+      --line: #c3c3c3;
+      --ink: #111;
+      --muted: #666;
+      --blue: #0b47f0;
+      --red: #e11a1a;
+      --purple: #8b16ff;
+      --header: #10162a;
+      --headerText: #d4defb;
+      --ok: #00bf63;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); font-family: 'Segoe UI', Arial, sans-serif; }
+
+    .hdr {
+      height: 42px;
+      background: var(--header);
+      color: var(--headerText);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      border-bottom: 2px solid #060a15;
+    }
+    .hdr-left { display: flex; align-items: center; gap: 14px; }
+    .logo { font-weight: 900; letter-spacing: .1em; color: #7ec8ff; }
+    .nav-link {
+      color: #99aacc;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .nav-link:hover { background: #1f2740; color: #dde7ff; }
+    .nav-link.active { background: #1a2d60; color: #9ed2ff; }
+
+    .status { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4d4d4d;
+    }
+    .dot.live { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+
+    .page {
+      height: calc(100% - 42px);
+      display: grid;
+      grid-template-columns: minmax(180px, 22%) 1fr;
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .card-hdr {
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      color: #273250;
+      border-bottom: 1px solid #d6dbe7;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: calc(100% - 36px);
+      min-height: 300px;
+      background: #fafafa;
+    }
+    .chart-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .gamma-tools { display: flex; align-items: center; gap: 6px; }
+    .gamma-btn {
+      border: 1px solid #aeb7cc;
+      background: #f2f5ff;
+      color: #2b3968;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 4px;
+      padding: 1px 7px;
+      cursor: pointer;
+    }
+    .gamma-hint { font-size: 10px; color: #5f6780; font-weight: 700; }
+
+    .compass-layout {
+      height: calc(100% - 36px);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      min-height: 0;
+      padding: 8px;
+      gap: 8px;
+    }
+
+    .compass-wrap {
+      position: relative;
+      min-height: 320px;
+      background: #f7f7f7;
+      border: 1px solid #d6d6d6;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .compass-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    .center-readout {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: #101010;
+      text-align: center;
+    }
+    .center-title { font-size: 34px; font-weight: 900; line-height: 1; }
+    .center-sub { font-size: 16px; font-weight: 700; color: #2f2f2f; }
+
+    .box-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .box-row.single { grid-template-columns: 1fr; }
+    .box {
+      border: 1px solid #bcbcbc;
+      background: #fdfdfd;
+      border-radius: 4px;
+      padding: 5px 7px;
+    }
+    .box-label { font-size: 11px; font-weight: 800; color: #344; text-transform: uppercase; }
+    .box-val { font-size: 30px; font-weight: 900; line-height: 1; margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .box-time { margin-top: 2px; font-size: 10px; color: var(--muted); font-weight: 700; }
+
+    @media (max-width: 980px) {
+      .page { grid-template-columns: 1fr; grid-template-rows: 340px 1fr; }
+      .compass-wrap { min-height: 260px; }
+      .box-val { font-size: 26px; }
+      .center-title { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="logo">EDR SAI</div>
+      <a href="/web" class="nav-link active">Web</a>
+    </div>
+    <div class="status">
+      <div id="dot" class="dot"></div>
+      <span id="liveText">sin datos</span>
+      <span id="clock">--:--:--</span>
+    </div>
+  </div>
+
+  <div class="page">
+    <section class="card">
+      <div class="card-hdr">
+        <span>Gamma vs Gamma Depth</span>
+        <div class="gamma-tools">
+          <button id="zoomIn" class="gamma-btn" type="button">+</button>
+          <button id="zoomOut" class="gamma-btn" type="button">-</button>
+          <button id="zoomReset" class="gamma-btn" type="button">Reset</button>
+          <span class="gamma-hint">wheel zoom · shift+wheel scroll</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="gammaCanvas"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-hdr">
+        <span>Compass</span>
+        <span id="pointsInfo">0 pts</span>
+      </div>
+      <div class="compass-layout">
+        <div class="compass-wrap">
+          <canvas id="compassCanvas"></canvas>
+          <div class="center-readout">
+            <div class="center-sub" id="centerMode">—</div>
+            <div class="center-title" id="centerAz">—</div>
+          </div>
+        </div>
+        <div class="box-row single">
+          <div class="box">
+            <div class="box-label">GAMMA</div>
+            <div class="box-val" id="gammaVal">—</div>
+            <div class="box-time" id="gammaTime">--:--:--</div>
+          </div>
+        </div>
+        <div class="box-row">
+          <div class="box">
+            <div class="box-label">INCL</div>
+            <div class="box-val" id="inclVal">—</div>
+            <div class="box-time" id="inclTime">--:--:--</div>
+          </div>
+          <div class="box">
+            <div class="box-label">AZIM</div>
+            <div class="box-val" id="azimVal">—</div>
+            <div class="box-time" id="azimTime">--:--:--</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    'use strict';
+
+    const params = new URLSearchParams(window.location.search);
+    const backendOrigin = (params.get('backend') || 'http://127.0.0.1:5051').replace(/\/$/, '');
+
+    const MAX_GAMMA = 1400;
+    const GAMMA_WINDOW_M = 400;
+    const GAMMA_BIN_M = 0.1;
+    const gammaSeries = []; // [{depth, gamma}]
+    const gammaView = { enabled: false, min: null, max: null };
+    let gammaViewport = null;
+    let gammaDrag = null;
+
+    let lastGammaTs = null;
+    let lastGammaFallbackKey = null;
+    let lastCompassPoints = [];
+
+    const dot = document.getElementById('dot');
+    const liveText = document.getElementById('liveText');
+    const clockEl = document.getElementById('clock');
+    const inclVal = document.getElementById('inclVal');
+    const azimVal = document.getElementById('azimVal');
+    const gammaVal = document.getElementById('gammaVal');
+    const inclTime = document.getElementById('inclTime');
+    const azimTime = document.getElementById('azimTime');
+    const gammaTime = document.getElementById('gammaTime');
+    const centerMode = document.getElementById('centerMode');
+    const centerAz = document.getElementById('centerAz');
+    const pointsInfo = document.getElementById('pointsInfo');
+
+    const gammaCanvas = document.getElementById('gammaCanvas');
+    const compassCanvas = document.getElementById('compassCanvas');
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+    const zoomResetBtn = document.getElementById('zoomReset');
+
+    let liveTimer = null;
+    let gammaOffset = 15.0;
+    const COMPASS_SPACE_COUNT = 6;
+    const COMPASS_POINT_COUNT = 5;
+    const tfaTrail = []; // newest first
+    let lastTfaSampleKey = null;
+
+    function nowHms() {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+    }
+
+    setInterval(() => { clockEl.textContent = nowHms(); }, 1000);
+    clockEl.textContent = nowHms();
+
+    function setLive(isLive) {
+      dot.classList.toggle('live', !!isLive);
+      liveText.textContent = isLive ? 'en vivo' : 'sin datos';
+    }
+
+    function fitCanvas(cv) {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const w = Math.max(10, cv.clientWidth);
+      const h = Math.max(10, cv.clientHeight);
+      const tw = Math.round(w * dpr);
+      const th = Math.round(h * dpr);
+      if (cv.width !== tw || cv.height !== th) {
+        cv.width = tw;
+        cv.height = th;
+      }
+      const ctx = cv.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w, h };
+    }
+
+    function fmt(v, dec = 1) {
+      if (v == null || Number.isNaN(v)) return '—';
+      return Number(v).toFixed(dec);
+    }
+
+    function gammaDepthFromHoleDepth(holeDepth) {
+      if (holeDepth == null || Number.isNaN(holeDepth)) return null;
+      return Number(holeDepth) - Number(gammaOffset || 0);
+    }
+
+    function niceStep(span, targetTicks) {
+      const safeSpan = Math.max(1, Number(span) || 1);
+      const raw = safeSpan / Math.max(2, targetTicks || 8);
+      const p10 = Math.pow(10, Math.floor(Math.log10(raw)));
+      const n = raw / p10;
+      if (n <= 1) return 1 * p10;
+      if (n <= 2) return 2 * p10;
+      if (n <= 5) return 5 * p10;
+      return 10 * p10;
+    }
+
+    function pickNumberByKeys(obj, keys) {
+      for (const k of keys) {
+        if (obj[k] != null) {
+          const n = Number(obj[k]);
+          if (Number.isFinite(n)) return n;
+        }
+      }
+      return null;
+    }
+
+    function readIncomingTfa(d) {
+      const gtfa = pickNumberByKeys(d, ['gTFA', 'gtfa', 'GTFA']);
+      if (gtfa != null) {
+        return { mode: 'gTFA', value: ((gtfa % 360) + 360) % 360, color: '#0b47f0' };
+      }
+      const mtfa = pickNumberByKeys(d, ['mTFA', 'mtfa', 'MTFA']);
+      if (mtfa != null) {
+        return { mode: 'mTFA', value: ((mtfa % 360) + 360) % 360, color: '#e11a1a' };
+      }
+      return null;
+    }
+
+    function pushTfaTrail(tfa) {
+      if (!tfa) return;
+      tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
+      if (tfaTrail.length > COMPASS_POINT_COUNT) {
+        tfaTrail.splice(COMPASS_POINT_COUNT);
+      }
+    }
+
+    function trailToCompassPoints() {
+      return tfaTrail.map((p, idx) => ({
+        az: p.value,
+        r: (COMPASS_SPACE_COUNT - idx - 0.5) / COMPASS_SPACE_COUNT,
+        color: p.color,
+      }));
+    }
+
+    function buildCompassPointsFromPayload(d) {
+      if (Array.isArray(d.compass_points) && d.compass_points.length) return d.compass_points;
+
+      const gtfa = pickNumberByKeys(d, ['gTFA', 'gtfa', 'GTFA']);
+      const mtfa = pickNumberByKeys(d, ['mTFA', 'mtfa', 'MTFA']);
+      const out = [];
+
+      if (gtfa != null) out.push({ az: gtfa, r: 0.95, label: 'gTFA', color: '#0b47f0' });
+      if (mtfa != null) out.push({ az: mtfa, r: 0.55, label: 'mTFA', color: '#e11a1a' });
+
+      return out;
+    }
+
+    function addGammaPoint(depth, gamma) {
+      if (depth == null || gamma == null) return;
+      const d = Number(depth);
+      const g = Number(gamma);
+      if (!Number.isFinite(d) || !Number.isFinite(g)) return;
+
+      const last = gammaSeries.length ? gammaSeries[gammaSeries.length - 1] : null;
+      if (last) {
+        const sameDepth = Math.abs(last.depth - d) < 0.05;
+        const sameGamma = Math.abs(last.gamma - g) < 0.2;
+        if (sameDepth && sameGamma) return;
+      }
+
+      gammaSeries.push({ depth: d, gamma: g });
+      if (gammaSeries.length > MAX_GAMMA) gammaSeries.splice(0, gammaSeries.length - MAX_GAMMA);
+    }
+
+    function buildGammaTrackPoints(d0, d1) {
+      const bins = new Map();
+      for (const p of gammaSeries) {
+        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
+        if (p.depth < d0 - 1 || p.depth > d1 + 1) continue;
+        const b = Math.round(p.depth / GAMMA_BIN_M) * GAMMA_BIN_M;
+        bins.set(b, p.gamma);
+      }
+      return Array.from(bins.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([depth, gamma]) => ({ depth, gamma }));
+    }
+
+    function gammaDataBounds() {
+      let minD = Infinity;
+      let maxD = -Infinity;
+      for (const p of gammaSeries) {
+        if (!Number.isFinite(p.depth)) continue;
+        minD = Math.min(minD, p.depth);
+        maxD = Math.max(maxD, p.depth);
+      }
+      if (!Number.isFinite(minD) || !Number.isFinite(maxD)) {
+        return { min: 0, max: 1 };
+      }
+      return { min: Math.min(0, minD), max: Math.max(1, maxD) };
+    }
+
+    function clampGammaView(minV, maxV, bounds) {
+      let min = minV;
+      let max = maxV;
+      const total = bounds.max - bounds.min;
+      const span = Math.max(1, max - min);
+
+      if (span >= total) {
+        return { min: bounds.min, max: bounds.max };
+      }
+      if (min < bounds.min) {
+        max += bounds.min - min;
+        min = bounds.min;
+      }
+      if (max > bounds.max) {
+        min -= max - bounds.max;
+        max = bounds.max;
+      }
+      return { min, max };
+    }
+
+    function drawGammaChart() {
+      const { ctx, w, h } = fitCanvas(gammaCanvas);
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.fillStyle = '#f9f9f9';
+      ctx.fillRect(0, 0, w, h);
+
+      const pad = { top: 30, right: 16, bottom: 38, left: 58 };
+      const pw = w - pad.left - pad.right;
+      const ph = h - pad.top - pad.bottom;
+      if (pw <= 0 || ph <= 0) return;
+
+      if (gammaSeries.length < 2) {
+        ctx.strokeStyle = '#3a3a3a';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(pad.left, pad.top, pw, ph);
+        ctx.fillStyle = '#777';
+        ctx.font = '12px Segoe UI';
+        ctx.fillText('Esperando puntos gamma/depth...', pad.left + 10, pad.top + 22);
+        return;
+      }
+
+      let minD = Infinity;
+      let maxD = -Infinity;
+      for (const p of gammaSeries) {
+        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
+        minD = Math.min(minD, p.depth);
+        maxD = Math.max(maxD, p.depth);
+      }
+      if (!Number.isFinite(minD) || !Number.isFinite(maxD)) return;
+
+      const bounds = gammaDataBounds();
+      const autoMin = bounds.max <= GAMMA_WINDOW_M ? 0 : bounds.max - GAMMA_WINDOW_M;
+      let viewMin = autoMin;
+      let viewMax = autoMin + GAMMA_WINDOW_M;
+      if (gammaView.enabled && Number.isFinite(gammaView.min) && Number.isFinite(gammaView.max) && gammaView.max > gammaView.min) {
+        const clamped = clampGammaView(gammaView.min, gammaView.max, bounds);
+        viewMin = clamped.min;
+        viewMax = clamped.max;
+      }
+
+      let d0 = viewMin;
+      let d1 = viewMax;
+      if (!Number.isFinite(d0) || !Number.isFinite(d1) || d1 <= d0) {
+        d0 = viewMin;
+        d1 = viewMin + 1;
+      }
+      const depthTick = niceStep(d1 - d0, 9);
+
+      const g0 = 0;
+      const g1 = 255;
+
+      const innerTop = 4;
+      const innerBottom = 8;
+      const innerHeight = Math.max(1, ph - innerTop - innerBottom);
+
+      const x = g => pad.left + ((g - g0) / (g1 - g0)) * pw;
+      const y = d => pad.top + innerTop + ((d - d0) / (d1 - d0)) * innerHeight;
+      gammaViewport = { pad, pw, ph, d0, d1 };
+
+      // Track border
+      ctx.strokeStyle = '#262626';
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(pad.left, pad.top, pw, ph);
+
+      // Vertical gamma grid
+      ctx.setLineDash([2, 5]);
+      ctx.strokeStyle = '#9a9a9a';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const gx = pad.left + (pw * i / 4);
+        ctx.beginPath();
+        ctx.moveTo(gx, pad.top);
+        ctx.lineTo(gx, pad.top + ph);
+        ctx.stroke();
+      }
+
+      // Horizontal depth grid (adaptive step)
+      const firstTick = Math.ceil(d0 / depthTick) * depthTick;
+      for (let d = firstTick; d <= d1 + depthTick * 0.5; d += depthTick) {
+        const gy = y(d);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, gy);
+        ctx.lineTo(pad.left + pw, gy);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // Track labels
+      ctx.fillStyle = '#202020';
+      ctx.font = 'bold 12px Segoe UI';
+      ctx.textAlign = 'center';
+      ctx.fillText('Gamma Ray (API)', pad.left + pw / 2, 16);
+
+      ctx.font = 'bold 11px Segoe UI';
+      ctx.textAlign = 'left';
+      ctx.fillText('0', pad.left, pad.top - 8);
+      ctx.textAlign = 'right';
+      ctx.fillText('255', pad.left + pw, pad.top - 8);
+
+      ctx.textAlign = 'left';
+      ctx.font = '11px Segoe UI';
+      ctx.fillText('', pad.left, h - 16);
+
+      ctx.save();
+      ctx.translate(18, pad.top + ph / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Segoe UI';
+      ctx.fillText('Gamma Depth (m)', 0, 0);
+      ctx.restore();
+
+      ctx.fillStyle = '#1f1f1f';
+      ctx.font = '10px Segoe UI';
+      ctx.textAlign = 'right';
+      for (let d = firstTick; d <= d1 + depthTick * 0.5; d += depthTick) {
+        const gy = y(d);
+        ctx.fillText(`${d.toFixed(0)}`, pad.left - 6, gy + 3);
+      }
+
+      const gammaTrack = buildGammaTrackPoints(d0, d1);
+      if (gammaTrack.length < 2) return;
+
+      // Curve
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 1.7;
+      ctx.beginPath();
+      let started = false;
+      for (const p of gammaTrack) {
+        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
+        const px = x(p.gamma);
+        const py = y(p.depth);
+        if (!started) {
+          ctx.moveTo(px, py);
+          started = true;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+    }
+
+    function drawCompass(points, azimNow) {
+      const { ctx, w, h } = fitCanvas(compassCanvas);
+      ctx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const labelMargin = 34;
+      const R = Math.max(40, (Math.min(w, h) / 2) - labelMargin);
+
+      ctx.fillStyle = '#f3f3f3';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= COMPASS_SPACE_COUNT; i++) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, (R * i) / COMPASS_SPACE_COUNT, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      for (let deg = 0; deg < 360; deg += 10) {
+        const a = (deg - 90) * Math.PI / 180;
+        const r1 = R;
+        const r2 = R - (deg % 30 === 0 ? 10 : 5);
+        ctx.strokeStyle = '#555';
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+        ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+        ctx.stroke();
+      }
+
+      const dir = [
+        { d: 0, t: '0' },
+        { d: 90, t: '90' },
+        { d: 180, t: '180' },
+        { d: 270, t: '270' }
+      ];
+      ctx.fillStyle = '#1d1d1d';
+      ctx.font = 'bold 18px Segoe UI';
+      dir.forEach(({ d, t }) => {
+        const a = (d - 90) * Math.PI / 180;
+        const rr = R + 16;
+        const tx = cx + Math.cos(a) * rr;
+        const ty = cy + Math.sin(a) * rr;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(t, tx, ty);
+      });
+
+      // Current azim pointer
+      if (Number.isFinite(azimNow)) {
+        const a = (azimNow - 90) * Math.PI / 180;
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * (R * 0.95), cy + Math.sin(a) * (R * 0.95));
+        ctx.stroke();
+      }
+
+      // Payload points: r=1 outer ring, r=0 center
+      let n = 0;
+      for (const p of (Array.isArray(points) ? points : [])) {
+        const az = Number(p.az);
+        let rr = Number(p.r);
+        if (!Number.isFinite(az) || !Number.isFinite(rr)) continue;
+        if (rr > 1) rr = rr / 100;
+        rr = Math.max(0, Math.min(1, rr));
+        const a = (az - 90) * Math.PI / 180;
+        const pr = R * rr;
+        const px = cx + Math.cos(a) * pr;
+        const py = cy + Math.sin(a) * pr;
+
+        ctx.fillStyle = p.color || (n % 2 === 0 ? '#0b47f0' : '#e11a1a');
+        ctx.beginPath();
+        ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (p.label) {
+          ctx.fillStyle = '#101010';
+          ctx.font = 'bold 11px Segoe UI';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.label, px + 6, py);
+        }
+        n += 1;
+      }
+      pointsInfo.textContent = `${n} pts`;
+    }
+
+    function applyData(d) {
+      if (!d || typeof d !== 'object') return;
+
+      const incl = d.incl != null ? Number(d.incl) : null;
+      const azim = d.azim != null ? Number(d.azim) : null;
+      const gamma = d.gamma != null ? Number(d.gamma) : null;
+      const depth = d.hole_depth != null ? Number(d.hole_depth) : null;
+      if (d.gamma_offset != null) {
+        const off = Number(d.gamma_offset);
+        if (Number.isFinite(off)) gammaOffset = off;
+      }
+      const gammaDepth = gammaDepthFromHoleDepth(depth);
+
+      if (incl != null) {
+        inclVal.textContent = fmt(incl, 1);
+        inclTime.textContent = nowHms();
+      }
+      if (azim != null) {
+        azimVal.textContent = fmt(azim, 1);
+        azimTime.textContent = nowHms();
+      }
+
+      const incomingTfa = readIncomingTfa(d);
+      if (incomingTfa) {
+        const tfaSampleKey = d.gamma_ts != null
+          ? `gts:${d.gamma_ts}`
+          : (d.ts != null ? `sec:${Math.floor(Number(d.ts))}` : null);
+        if (tfaSampleKey == null || tfaSampleKey !== lastTfaSampleKey) {
+          pushTfaTrail(incomingTfa);
+          if (tfaSampleKey != null) lastTfaSampleKey = tfaSampleKey;
+        }
+      }
+      if (tfaTrail.length) {
+        centerMode.textContent = tfaTrail[0].mode;
+        centerAz.textContent = fmt(tfaTrail[0].value, 1);
+      } else {
+        centerMode.textContent = '—';
+        centerAz.textContent = '—';
+      }
+
+      const gammaTick = d.gamma_ts != null ? d.gamma_ts : d.ts;
+      const gammaFallbackKey = `${gammaDepth}|${gamma}`;
+      if (gammaDepth != null && gamma != null) {
+        if (gammaTick != null) {
+          if (gammaTick !== lastGammaTs) {
+            lastGammaTs = gammaTick;
+            addGammaPoint(gammaDepth, gamma);
+            gammaVal.textContent = fmt(gamma, 1);
+            gammaTime.textContent = nowHms();
+          }
+        } else if (gammaFallbackKey !== lastGammaFallbackKey) {
+          lastGammaFallbackKey = gammaFallbackKey;
+          addGammaPoint(gammaDepth, gamma);
+          gammaVal.textContent = fmt(gamma, 1);
+          gammaTime.textContent = nowHms();
+        }
+      }
+
+      lastCompassPoints = trailToCompassPoints();
+
+      drawGammaChart();
+      drawCompass(lastCompassPoints, azim);
+
+      setLive(true);
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(() => setLive(false), 5000);
+    }
+
+    async function loadHistory() {
+      try {
+        let r = await fetch(`${backendOrigin}/api/web/history?limit=1200`);
+        if (!r || !r.ok) {
+          r = await fetch(`${backendOrigin}/api/history?limit=1200`);
+        }
+        if (!r || !r.ok) return;
+        const rows = await r.json();
+        rows.forEach(row => {
+          if (row.hole_depth != null && row.gamma != null) {
+            const gd = gammaDepthFromHoleDepth(Number(row.hole_depth));
+            if (gd != null) addGammaPoint(gd, Number(row.gamma));
+          }
+        });
+        drawGammaChart();
+      } catch (_) {
+      }
+    }
+
+    async function pollState() {
+      try {
+        let r = await fetch(`${backendOrigin}/api/web/state`, { cache: 'no-store' });
+        if (!r || !r.ok) {
+          r = await fetch(`${backendOrigin}/api/state`, { cache: 'no-store' });
+        }
+        if (r && r.ok) applyData(await r.json());
+      } catch (_) {
+      }
+    }
+
+    const socket = io(backendOrigin, { transports: ['websocket', 'polling'] });
+    socket.on('connect', () => setLive(false));
+    socket.on('disconnect', () => setLive(false));
+    socket.on('web_update', applyData);
+
+    window.addEventListener('resize', () => {
+      drawGammaChart();
+      drawCompass(lastCompassPoints, Number(azimVal.textContent));
+    });
+
+    gammaCanvas.addEventListener('wheel', (ev) => {
+      if (!gammaViewport) return;
+      ev.preventDefault();
+
+      const bounds = gammaDataBounds();
+      const span = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
+
+      if (ev.shiftKey) {
+        const deltaDepth = (ev.deltaY / 100) * Math.max(0.5, span * 0.06);
+        const moved = clampGammaView(gammaViewport.d0 + deltaDepth, gammaViewport.d1 + deltaDepth, bounds);
+        gammaView.enabled = true;
+        gammaView.min = moved.min;
+        gammaView.max = moved.max;
+        drawGammaChart();
+        return;
+      }
+
+      const rect = gammaCanvas.getBoundingClientRect();
+      const yPx = ev.clientY - rect.top;
+      const ratio = Math.max(0, Math.min(1, (yPx - gammaViewport.pad.top) / gammaViewport.ph));
+      const anchor = gammaViewport.d0 + ratio * span;
+      const zoomFactor = ev.deltaY > 0 ? 1.15 : 0.85;
+      let newSpan = span * zoomFactor;
+
+      const maxSpan = Math.max(1, bounds.max - bounds.min);
+      newSpan = Math.max(1.5, Math.min(maxSpan, newSpan));
+
+      let newMin = anchor - ((anchor - gammaViewport.d0) * (newSpan / span));
+      let newMax = newMin + newSpan;
+      const clamped = clampGammaView(newMin, newMax, bounds);
+
+      gammaView.enabled = true;
+      gammaView.min = clamped.min;
+      gammaView.max = clamped.max;
+      drawGammaChart();
+    }, { passive: false });
+
+    gammaCanvas.addEventListener('mousedown', (ev) => {
+      if (!gammaViewport) return;
+      gammaDrag = {
+        y: ev.clientY,
+        d0: gammaViewport.d0,
+        d1: gammaViewport.d1,
+      };
+    });
+
+    window.addEventListener('mousemove', (ev) => {
+      if (!gammaDrag || !gammaViewport) return;
+      const dy = ev.clientY - gammaDrag.y;
+      const span = Math.max(1, gammaDrag.d1 - gammaDrag.d0);
+      const deltaDepth = (dy / gammaViewport.ph) * span;
+      const bounds = gammaDataBounds();
+      const moved = clampGammaView(gammaDrag.d0 + deltaDepth, gammaDrag.d1 + deltaDepth, bounds);
+      gammaView.enabled = true;
+      gammaView.min = moved.min;
+      gammaView.max = moved.max;
+      drawGammaChart();
+    });
+
+    window.addEventListener('mouseup', () => { gammaDrag = null; });
+    gammaCanvas.addEventListener('mouseleave', () => { gammaDrag = null; });
+    gammaCanvas.addEventListener('dblclick', () => {
+      gammaView.enabled = false;
+      gammaView.min = null;
+      gammaView.max = null;
+      drawGammaChart();
+    });
+
+    function applyZoomFactor(factor) {
+      if (!gammaViewport) return;
+      const bounds = gammaDataBounds();
+      const span = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
+      const center = (gammaViewport.d0 + gammaViewport.d1) / 2;
+      let newSpan = Math.max(2, Math.min(Math.max(1, bounds.max - bounds.min), span * factor));
+      let newMin = center - newSpan / 2;
+      let newMax = center + newSpan / 2;
+      const clamped = clampGammaView(newMin, newMax, bounds);
+      gammaView.enabled = true;
+      gammaView.min = clamped.min;
+      gammaView.max = clamped.max;
+      drawGammaChart();
+    }
+
+    zoomInBtn.addEventListener('click', () => applyZoomFactor(0.85));
+    zoomOutBtn.addEventListener('click', () => applyZoomFactor(1.15));
+    zoomResetBtn.addEventListener('click', () => {
+      gammaView.enabled = false;
+      gammaView.min = null;
+      gammaView.max = null;
+      drawGammaChart();
+    });
+
+    loadHistory();
+    pollState();
+    setInterval(pollState, 1500);
+  </script>
+</body>
+</html>

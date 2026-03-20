@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EDR SAI — Monitor</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --bg:         #e8e8e8;
+      --panel:      #ffffff;
+      --border:     #c0c0c0;
+      --muted:      #666;
+      --hdr-bg:     #12122a;
+      --hdr-text:   #dde;
+      --green:      #00a85a;
+      --amber:      #d47800;
+      --blue:       #1455b0;
+      --cyan:       #007a8a;
+      --red:        #b82020;
+      --purple:     #8800cc;
+      --depth-bg:   #12122a;
+      --track-bg:   #f9f9f9;
+      --header-h:   40px;
+      --boxes-h:    88px;
+      --right-w:    155px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: #111;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 12px;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Header ── */
+    .hdr {
+      height: var(--header-h);
+      background: var(--hdr-bg);
+      color: var(--hdr-text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      gap: 8px;
+      flex-shrink: 0;
+      border-bottom: 2px solid #060616;
+    }
+    .hdr-left { display:flex; align-items:center; gap:14px; }
+    .hdr-logo { font-size:15px; font-weight:900; letter-spacing:2px; color:#7ec8ff; }
+    .nav-link {
+      font-size:11px; font-weight:700; color:#99aacc;
+      text-decoration:none; padding:4px 8px; border-radius:3px;
+      transition: background .15s, color .15s;
+    }
+    .nav-link:hover { background:#22224a; color:#dde; }
+    .nav-link.active { background:#1a2a5a; color:#7ec8ff; }
+    .hdr-center { display:flex; align-items:center; gap:14px; font-size:11px; color:#99aacc; }
+    .hdr-live   { display:flex; align-items:center; gap:5px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:#444; transition:background .3s; }
+    .dot.live { background:#00e676; box-shadow:0 0 5px #00e676; }
+    .hdr-right { display:flex; align-items:center; gap:6px; }
+
+    .btn {
+      padding:4px 11px; border-radius:3px; border:1px solid #3a3a5a;
+      background:#252540; color:#ccd; cursor:pointer; font-size:11px; font-weight:700;
+    }
+    .btn:hover { background:#30305a; }
+    .btn.zoom  { border-color:#4a5a7a; color:#aabbdd; padding:4px 8px; font-size:13px; }
+    .btn.zoom:hover { background:#2a2a5a; }
+    .zoom-wrap { display:flex; align-items:center; gap:2px; }
+    .zoom-label { font-size:9px; color:#7788aa; white-space:nowrap; }
+    .skew-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      background:#1a1a3a; border:1px solid #3a3a6a;
+      border-radius:4px; padding:2px 8px; font-size:10px;
+      color:#aabbdd; white-space:nowrap;
+    }
+    .skew-badge .skew-val { font-weight:900; font-size:12px; }
+    .skew-ahead-sender { color:#ffcc44; }
+    .skew-ahead-local  { color:#44ccff; }
+    .skew-ok           { color:#44dd88; }
+
+    /* ── Page frame ── */
+    .frame {
+      height: calc(100% - var(--header-h));
+      display: grid;
+      grid-template-rows: 1fr var(--boxes-h);
+      overflow: hidden;
+    }
+
+    /* ── Middle: tracks + right panel ── */
+    .middle {
+      display: grid;
+      grid-template-columns: 1fr var(--right-w);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Tracks container ── */
+    .tracks-wrap {
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+      background: #ddd;
+      border-right: 2px solid var(--border);
+      min-width: 0;
+      position: relative;
+    }
+
+    /* Time scale column */
+    .time-col {
+      width: 62px; flex-shrink: 0;
+      background: var(--depth-bg);
+      border-right: 1px solid #2a2a4a;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* Depth scale column */
+    .depth-col {
+      width: 52px; flex-shrink: 0;
+      background: var(--depth-bg);
+      border-right: 1px solid #2a2a4a;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .col-hdr {
+      height: 36px; background: #0a0a1a;
+      border-bottom: 1px solid #2a2a4a;
+      display:flex; align-items:center; justify-content:center;
+      font-size:9px; font-weight:900; color:#7788aa;
+      text-transform:uppercase; letter-spacing:.08em; flex-shrink:0;
+      text-align:center; line-height:1.2;
+    }
+    .col-canvas-wrap {
+      flex:1; min-height:0; position:relative; overflow:hidden;
+    }
+    .col-canvas-wrap canvas {
+      position:absolute; inset:0; width:100%!important; height:100%!important;
+    }
+
+    /* Track */
+    .track {
+      flex: 1; min-width:0;
+      display:flex; flex-direction:column;
+      border-right:1px solid var(--border);
+      background: var(--track-bg);
+      overflow: hidden;
+    }
+    .track:last-child { border-right:none; }
+    .track-hdr {
+      height:36px; background:#efefef;
+      border-bottom:2px solid var(--border);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      flex-shrink:0; padding:2px 4px;
+    }
+    .track-name { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+    .track-range {
+      font-size:9px; color:var(--muted);
+      display:flex; justify-content:space-between; width:100%; padding:0 3px;
+    }
+    .track-canvas-wrap {
+      flex:1; min-height:0; position:relative; overflow:hidden;
+    }
+    .track-canvas-wrap canvas {
+      position:absolute; inset:0; width:100%!important; height:100%!important;
+    }
+
+    /* scroll hint */
+    .scroll-hint {
+      position:absolute; bottom:6px; left:50%; transform:translateX(-50%);
+      font-size:9px; color:#aaa; background:rgba(0,0,0,.35);
+      padding:2px 7px; border-radius:10px; pointer-events:none;
+      opacity:1; transition:opacity 1s;
+    }
+
+    /* ── Right panel ── */
+    .right-panel {
+      background:#f5f5f5; border-left:1px solid var(--border);
+      display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden;
+    }
+    .rp-hdr {
+      background:var(--hdr-bg); color:#7788aa;
+      font-size:9px; font-weight:900; text-transform:uppercase;
+      letter-spacing:.1em; padding:5px 8px; flex-shrink:0;
+    }
+    .rp-item {
+      padding:6px 8px 4px; border-bottom:1px solid #e0e0e0;
+      display:flex; flex-direction:column; gap:1px;
+    }
+    .rp-label { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .rp-value { font-size:19px; font-weight:900; line-height:1.1; font-variant-numeric:tabular-nums; color:#111; }
+    .rp-value.green  { color:var(--green);  }
+    .rp-value.blue   { color:var(--blue);   }
+    .rp-value.amber  { color:var(--amber);  }
+    .rp-value.purple { color:var(--purple); }
+    .rp-unit { font-size:9px; color:var(--muted); font-weight:600; }
+
+    /* ── Bottom boxes ── */
+    .boxes {
+      display:grid; grid-template-columns:repeat(8,1fr);
+      gap:3px; padding:4px; background:#d0d0d0;
+      border-top:2px solid #b0b0b0; align-items:stretch;
+    }
+    .box {
+      background:var(--panel); border:1px solid #ccc; border-radius:3px;
+      padding:5px 7px 4px; display:flex; flex-direction:column; gap:2px;
+      min-width:0; overflow:hidden;
+    }
+    .box.hi-g { border-top:3px solid var(--green);  }
+    .box.hi-b { border-top:3px solid var(--blue);   }
+    .box.hi-a { border-top:3px solid var(--amber);  }
+    .box.hi-r { border-top:3px solid var(--red);    }
+    .box.hi-c { border-top:3px solid var(--cyan);   }
+    .box.hi-p { border-top:3px solid var(--purple); }
+    .box-label { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .box-value { font-size:20px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#111; }
+    .box-value.green  { color:var(--green);  }
+    .box-value.blue   { color:var(--blue);   }
+    .box-value.amber  { color:var(--amber);  }
+    .box-value.purple { color:var(--purple); }
+    .box-unit { font-size:9px; color:var(--muted); font-weight:600; }
+
+
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#bbb; border-radius:3px; }
+
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">EDR SAI</div>
+    <a href="/" class="nav-link active">Monitor</a>
+    <a href="/web" class="nav-link">Web</a>
+    <a href="/export" class="nav-link">Exportar</a>
+    <a href="/config" class="nav-link">Config</a>
+  </div>
+  <div class="hdr-center">
+    <div class="hdr-live">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Sin datos</span>
+    </div>
+    <span id="hdrTime">--:--:--</span>
+    <span id="skewBadge" class="skew-badge" title="Desfasaje de reloj entre EDRsender y EDRsai">⏱ <span id="skewVal" class="skew-val">—</span></span>
+  </div>
+  <div class="hdr-right">
+    <div class="zoom-wrap">
+      <span class="zoom-label" id="zoomLabel">~300 pts</span>
+      <button class="btn zoom" id="btnZoomIn"  title="Zoom In (+)">＋</button>
+      <button class="btn zoom" id="btnZoomOut" title="Zoom Out (−)">－</button>
+    </div>
+  </div>
+</div>
+
+<!-- Frame -->
+<div class="frame">
+
+  <!-- Middle -->
+  <div class="middle">
+
+    <!-- Tracks -->
+    <div class="tracks-wrap" id="tracksWrap">
+
+      <!-- Time scale -->
+      <div class="time-col">
+        <div class="col-hdr">TIME<br>hh:mm:ss</div>
+        <div class="col-canvas-wrap">
+          <canvas id="cvTime"></canvas>
+        </div>
+      </div>
+
+      <!-- Depth scale -->
+      <div class="depth-col">
+        <div class="col-hdr">DEPTH<br>m</div>
+        <div class="col-canvas-wrap">
+          <canvas id="cvDepth"></canvas>
+        </div>
+      </div>
+
+      <!-- Track: WOB -->
+      <div class="track">
+        <div class="track-hdr">
+          <div class="track-name" style="color:var(--amber)">WOB</div>
+          <div class="track-range"><span id="tWOB0">0</span><span id="tWOB1">—</span></div>
+        </div>
+        <div class="track-canvas-wrap"><canvas id="cvWOB"></canvas></div>
+      </div>
+
+      <!-- Track: SPP -->
+      <div class="track">
+        <div class="track-hdr">
+          <div class="track-name" style="color:var(--red)">SPP</div>
+          <div class="track-range"><span id="tSPP0">0</span><span id="tSPP1">—</span></div>
+        </div>
+        <div class="track-canvas-wrap"><canvas id="cvSPP"></canvas></div>
+      </div>
+
+      <!-- Track: RPM -->
+      <div class="track">
+        <div class="track-hdr">
+          <div class="track-name" style="color:var(--cyan)">RPM</div>
+          <div class="track-range"><span id="tRPM0">0</span><span id="tRPM1">—</span></div>
+        </div>
+        <div class="track-canvas-wrap"><canvas id="cvRPM"></canvas></div>
+      </div>
+
+      <!-- Track: Gamma Ray -->
+      <div class="track">
+        <div class="track-hdr">
+          <div class="track-name" style="color:var(--purple)">Gamma Ray</div>
+          <div class="track-range"><span>0</span><span>255</span></div>
+        </div>
+        <div class="track-canvas-wrap"><canvas id="cvGamma"></canvas></div>
+      </div>
+
+      <div class="scroll-hint" id="scrollHint">↕ Rueda para navegar</div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <div class="rp-hdr">Instantáneo</div>
+      <div class="rp-item"><div class="rp-label">Hole Depth</div><div class="rp-value green"  id="rpHD">—</div><div class="rp-unit">m</div></div>
+      <div class="rp-item"><div class="rp-label">Bit Depth</div> <div class="rp-value blue"   id="rpBD">—</div><div class="rp-unit">m</div></div>
+      <div class="rp-item"><div class="rp-label">WOB</div>       <div class="rp-value amber"  id="rpWOB">—</div><div class="rp-unit">t (ton)</div></div>
+      <div class="rp-item"><div class="rp-label">RPM</div>       <div class="rp-value"         id="rpRPM">—</div><div class="rp-unit">rpm</div></div>
+      <div class="rp-item"><div class="rp-label">Flow (TPO)</div><div class="rp-value"         id="rpFlow">—</div><div class="rp-unit">gal/min</div></div>
+      <div class="rp-item"><div class="rp-label">ROP</div>       <div class="rp-value amber"  id="rpROP">—</div><div class="rp-unit">m/hr</div></div>
+      <div class="rp-item"><div class="rp-label">Standpipe</div><div class="rp-value"          id="rpSPP">—</div><div class="rp-unit">psi</div></div>
+      <div class="rp-item"><div class="rp-label">Gamma Ray</div><div class="rp-value purple"  id="rpGamma">—</div><div class="rp-unit">api</div></div>
+      <div class="rp-item"><div class="rp-label">Gamma Depth</div><div class="rp-value purple" id="rpGammaDepth">—</div><div class="rp-unit">m</div></div>
+    </div>
+
+  </div><!-- end middle -->
+
+  <!-- Bottom boxes -->
+  <div class="boxes">
+    <div class="box hi-g"><div class="box-label">Hole Depth</div>    <div class="box-value green" id="bxHD">—</div>   <div class="box-unit">m</div></div>
+    <div class="box hi-b"><div class="box-label">Bit Depth</div>     <div class="box-value blue"  id="bxBD">—</div>   <div class="box-unit">m</div></div>
+    <div class="box hi-a"><div class="box-label">Weight on Bit</div> <div class="box-value amber" id="bxWOB">—</div>  <div class="box-unit">t</div></div>
+    <div class="box hi-a"><div class="box-label">Rotary RPM</div>    <div class="box-value"        id="bxRPM">—</div>  <div class="box-unit">rpm</div></div>
+    <div class="box hi-c"><div class="box-label">Total Pump Out</div><div class="box-value"        id="bxFlow">—</div> <div class="box-unit">gal/min</div></div>
+    <div class="box hi-a"><div class="box-label">On-Btm ROP</div>    <div class="box-value amber" id="bxROP">—</div>  <div class="box-unit">m/hr</div></div>
+    <div class="box hi-r"><div class="box-label">Standpipe Pres.</div><div class="box-value"       id="bxSPP">—</div> <div class="box-unit">psi</div></div>
+    <div class="box" style="border-top:2px solid #8800cc"><div class="box-label">Gamma Depth</div><div class="box-value purple" id="bxGammaDepth">—</div><div class="box-unit">m</div></div>
+  </div>
+
+</div><!-- end frame -->
+
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+'use strict';
+// ── Constants ─────────────────────────────────────────────────────────────────
+const MAX_PTS  = 2000;   // max samples kept in memory
+const VIEW_PTS = 300;    // rows visible in tracks at once
+const POLL_MS  = 1200;
+
+// ── Full data store ───────────────────────────────────────────────────────────
+// Each array has same length; index 0 = oldest sample
+const S = {
+  depth: [], ts: [], hd: [], bd: [], wob: [], spp: [], rpm: [], flow: [], rop: [], gamma: [], gammaDepth: []
+};
+
+// ── Scroll offset & zoom ─────────────────────────────────────────────────────
+let viewOffset = 0;   // 0 = live (bottom of data), positive scrolls toward surface
+let viewPts    = Number(localStorage.getItem('edr_viewPts') || 300); // persisted zoom
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const statusDot  = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const hdrTime    = document.getElementById('hdrTime');
+
+const rpHD   = document.getElementById('rpHD');
+const rpBD   = document.getElementById('rpBD');
+const rpWOB  = document.getElementById('rpWOB');
+const rpRPM  = document.getElementById('rpRPM');
+const rpFlow = document.getElementById('rpFlow');
+const rpROP  = document.getElementById('rpROP');
+const rpSPP  = document.getElementById('rpSPP');
+const rpGamma= document.getElementById('rpGamma');
+
+const bxHD   = document.getElementById('bxHD');
+const bxBD   = document.getElementById('bxBD');
+const bxWOB  = document.getElementById('bxWOB');
+const bxRPM  = document.getElementById('bxRPM');
+const bxFlow = document.getElementById('bxFlow');
+const bxROP  = document.getElementById('bxROP');
+const bxSPP  = document.getElementById('bxSPP');
+
+const tWOB0 = document.getElementById('tWOB0'), tWOB1 = document.getElementById('tWOB1');
+const tSPP0 = document.getElementById('tSPP0'), tSPP1 = document.getElementById('tSPP1');
+const tRPM0 = document.getElementById('tRPM0'), tRPM1 = document.getElementById('tRPM1');
+
+const cvTime  = document.getElementById('cvTime');
+const cvDepth = document.getElementById('cvDepth');
+const cvWOB   = document.getElementById('cvWOB');
+const cvSPP   = document.getElementById('cvSPP');
+const cvRPM   = document.getElementById('cvRPM');
+const cvGamma = document.getElementById('cvGamma');
+
+const tracksWrap  = document.getElementById('tracksWrap');
+const scrollHint  = document.getElementById('scrollHint');
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(v, dec) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  return isNaN(n) ? '—' : n.toFixed(dec ?? 2);
+}
+
+function niceStep(span, ticks) {
+  if (span <= 0) return 1;
+  const raw  = span / ticks;
+  const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  return (norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10) * mag;
+}
+
+function rangeFor(arr) {
+  const v = arr.filter(x => x !== null && x !== undefined);
+  if (!v.length) return [0, 1];
+  const mn = Math.min(...v), mx = Math.max(...v);
+  const pad = (mx - mn) * 0.08 || 1;
+  return [mn - pad, mx + pad];
+}
+
+function fitCanvas(cv) {
+  const w = cv.parentElement.clientWidth;
+  const h = cv.parentElement.clientHeight;
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  return cv.getContext('2d');
+}
+
+// ── Get the slice of data visible in the current view ────────────────────────
+function getView() {
+  const n    = S.depth.length;
+  if (n === 0) return null;
+  const end  = Math.max(1, n - viewOffset);          // exclusive upper index
+  const start= Math.max(0, end - viewPts);
+  return { start, end, n };
+}
+
+// ── Format unix timestamp → HH:MM:SS ────────────────────────────────────────
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  return String(d.getHours()).padStart(2,'0') + ':' +
+         String(d.getMinutes()).padStart(2,'0') + ':' +
+         String(d.getSeconds()).padStart(2,'0');
+}
+
+// ── Shared Y mapper: row index → canvas Y (top=oldest, bottom=newest) ────────
+// Uses viewPts as the full-height baseline so the curve always starts at top.
+// When n < viewPts the curve fills from y=0 downward (not compressed to bottom).
+function rowY(iRel, H) {
+  return iRel * (H / viewPts);
+}
+
+// ── Grid Y positions (aligned with time scale marks) ───────────────────────
+function getGridYs(H) {
+  const v = getView();
+  if (!v || v.end - v.start < 2) return [];
+  const tSlice = S.ts.slice(v.start, v.end);
+  const n = tSlice.length;
+  const tMin = tSlice[0], tMax = tSlice[n - 1];
+  const tSpan = tMax - tMin || 1;
+  const nLabels = Math.max(2, Math.floor(H / 55));
+  const steps = [10, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+  const rawStep = tSpan / nLabels;
+  const tStep = steps.find(s => s >= rawStep) || 3600;
+  const ys = [];
+  const firstT = Math.ceil(tMin / tStep) * tStep;
+  for (let t = firstT; t <= tMax + tStep * 0.01; t += tStep) {
+    const frac = (t - tMin) / tSpan;
+    const iRel = Math.round(frac * (n - 1));
+    ys.push(rowY(iRel, H));
+  }
+  return ys;
+}
+
+// ── Draw time scale column ────────────────────────────────────────────────────
+function drawTimeScale(v) {
+  const ctx = fitCanvas(cvTime);
+  const W = cvTime.width, H = cvTime.height;
+  ctx.fillStyle = '#12122a';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!v || v.end - v.start < 2) {
+    ctx.fillStyle = '#445'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('—', W/2, H/2); return;
+  }
+
+  const tSlice = S.ts.slice(v.start, v.end);
+  const n = tSlice.length;
+  const tMin = tSlice[0], tMax = tSlice[n - 1];
+  const tSpan = tMax - tMin || 1;
+
+  const nLabels = Math.max(2, Math.floor(H / 55));
+  const steps = [10, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+  const rawStep = tSpan / nLabels;
+  const tStep = steps.find(s => s >= rawStep) || 3600;
+
+  ctx.strokeStyle = '#2a2a5a';
+  ctx.lineWidth   = 1;
+  ctx.fillStyle   = '#7ec8ff';
+  ctx.font        = '9px Segoe UI';
+  ctx.textAlign   = 'right';
+
+  const firstT = Math.ceil(tMin / tStep) * tStep;
+  for (let t = firstT; t <= tMax + tStep * 0.01; t += tStep) {
+    // map time value → nearest index → rowY
+    const frac = (t - tMin) / tSpan;
+    const iRel = Math.round(frac * (n - 1));
+    const y = rowY(iRel, H);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.fillText(fmtTime(t), W - 2, Math.max(10, y - 2));
+  }
+}
+
+// ── Draw depth scale ──────────────────────────────────────────────────────────
+function drawDepthScale(v) {
+  const ctx = fitCanvas(cvDepth);
+  const W = cvDepth.width, H = cvDepth.height;
+  ctx.fillStyle = '#12122a';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!v || v.end - v.start < 2) {
+    ctx.fillStyle = '#445'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText('—', W/2, H/2); return;
+  }
+
+  const slice = S.depth.slice(v.start, v.end);
+  const n = slice.length;
+  const dMin = slice[0], dMax = slice[n - 1];
+  const span = dMax - dMin || 1;
+
+  const step  = niceStep(span, 8);
+  const first = Math.ceil(dMin / step) * step;
+
+  ctx.strokeStyle = '#2a2a5a';
+  ctx.lineWidth   = 1;
+  ctx.fillStyle   = '#7788aa';
+  ctx.font        = '9px Segoe UI';
+  ctx.textAlign   = 'right';
+
+  for (let d = first; d <= dMax + step * 0.01; d += step) {
+    const frac = (d - dMin) / span;
+    const iRel = Math.round(frac * (n - 1));
+    const y = rowY(iRel, H);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.fillText(d.toFixed(1), W - 2, Math.max(10, y - 2));
+  }
+}
+
+// ── Draw a single track (uniform index Y axis) ────────────────────────────────
+function drawTrack(cv, key, color, minV, maxV, label0, label1) {
+  const ctx = fitCanvas(cv);
+  const W = cv.width, H = cv.height;
+
+  ctx.fillStyle = '#f9f9f9';
+  ctx.fillRect(0, 0, W, H);
+
+  // vertical grid lines
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.lineWidth   = 1;
+  for (let i = 1; i < 4; i++) {
+    const x = (i / 4) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  // horizontal dashed grid lines aligned with time scale
+  ctx.strokeStyle = '#c8ccd8';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([4, 4]);
+  getGridYs(H).forEach(y => {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  const v = getView();
+  if (!v || v.end - v.start < 2) return;
+
+  const vals = S[key].slice(v.start, v.end);
+  const n    = vals.length;
+  const vSpan = maxV - minV || 1;
+
+  function ptX(val) { return ((val - minV) / vSpan) * W; }
+  function ptY(i)   { return rowY(i, H); }
+
+  // Fill area from curve back to left edge
+  ctx.beginPath();
+  let firstValidI = -1;
+  let lastValidI  = -1;
+  for (let i = 0; i < n; i++) {
+    if (vals[i] === null || vals[i] === undefined) continue;
+    if (firstValidI < 0) { firstValidI = i; ctx.moveTo(ptX(vals[i]), ptY(i)); }
+    else ctx.lineTo(ptX(vals[i]), ptY(i));
+    lastValidI = i;
+  }
+  if (firstValidI >= 0) {
+    ctx.lineTo(0, ptY(lastValidI));
+    ctx.lineTo(0, ptY(firstValidI));
+    ctx.closePath();
+    ctx.fillStyle = color + '28';
+    ctx.fill();
+  }
+
+  // Curve line (connects consecutive non-null points)
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i < n; i++) {
+    if (vals[i] === null || vals[i] === undefined) { started = false; continue; }
+    if (!started) { ctx.moveTo(ptX(vals[i]), ptY(i)); started = true; }
+    else          ctx.lineTo(ptX(vals[i]), ptY(i));
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+
+  // For gamma: dot + horizontal tick at every non-null point (isolated points visible)
+  if (key === 'gamma') {
+    for (let i = 0; i < n; i++) {
+      if (vals[i] === null || vals[i] === undefined) continue;
+      const px = ptX(vals[i]);
+      const py = ptY(i);
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py);
+      ctx.strokeStyle = color + '44'; ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+    }
+  }
+
+  // Live marker: larger dot at most recent valid point
+  if (viewOffset === 0 && lastValidI >= 0) {
+    const px = ptX(vals[lastValidI]);
+    const py = ptY(lastValidI);
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+  }
+
+  // Update range labels (show actual data range)
+  if (label0 && label1) {
+    label0.textContent = minV.toFixed(key === 'spp' ? 0 : 1);
+    label1.textContent = maxV.toFixed(key === 'spp' ? 0 : 1);
+  }
+}
+
+// ── Redraw all ────────────────────────────────────────────────────────────────
+function redrawAll() {
+  const v = getView();
+  drawTimeScale(v);
+  drawDepthScale(v);
+  drawTrack(cvWOB,   'wob',   '#d47800', 0, 20,   tWOB0, tWOB1);
+  drawTrack(cvSPP,   'spp',   '#b82020', 0, 3000, tSPP0, tSPP1);
+  drawTrack(cvRPM,   'rpm',   '#007a8a', 0, 120,  tRPM0, tRPM1);
+  drawTrack(cvGamma, 'gamma', '#8800cc', 0, 255,  null,  null);
+}
+
+window.addEventListener('resize', redrawAll);
+
+// ── Scroll wheel on tracks ────────────────────────────────────────────────────
+let scrollHintTimer = null;
+tracksWrap.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const n = S.depth.length;
+  if (n < 2) return;
+
+  const step = Math.max(1, Math.round(viewPts * 0.1));  // 10% of visible range
+  const delta = e.deltaY > 0 ? -step : step;            // scroll down → older data
+  // Clamp: 0 (live) to n-viewPts (oldest visible window that still fills the view)
+  const maxOffset = Math.max(0, n - viewPts);
+  viewOffset = Math.max(0, Math.min(maxOffset, viewOffset + delta));
+
+  scrollHint.style.opacity = '1';
+  clearTimeout(scrollHintTimer);
+  if (viewOffset === 0) {
+    scrollHint.textContent = '↕ Rueda para navegar';
+  } else {
+    const v = getView();
+    const topDepth = S.depth[v.start];
+    scrollHint.textContent = `↑ Prof. ${topDepth.toFixed(0)} m — scroll↓ para volver`;
+  }
+  scrollHintTimer = setTimeout(() => { scrollHint.style.opacity = '0'; }, 3000);
+  redrawAll();
+}, { passive: false });
+
+// Double-click to snap back to live
+tracksWrap.addEventListener('dblclick', () => {
+  viewOffset = 0;
+  scrollHint.textContent = '↕ Rueda para navegar';
+  scrollHint.style.opacity = '1';
+  clearTimeout(scrollHintTimer);
+  scrollHintTimer = setTimeout(() => { scrollHint.style.opacity = '0'; }, 2000);
+  redrawAll();
+});
+
+// ── Live status ───────────────────────────────────────────────────────────────
+let liveTimer = null;
+function setLive(on) {
+  statusDot.className    = 'dot' + (on ? ' live' : '');
+  statusText.textContent = on ? 'En vivo' : 'Sin datos';
+}
+
+// ── Time skew badge ──────────────────────────────────────────────────────────
+const skewValEl   = document.getElementById('skewVal');
+const skewBadgeEl = document.getElementById('skewBadge');
+
+function updateSkewBadge(skew) {
+  if (skew == null) {
+    skewValEl.textContent = '—';
+    skewValEl.className = 'skew-val';
+    return;
+  }
+  const abs = Math.abs(skew);
+  let label, cls;
+  if (abs < 1) {
+    label = 'Sincronizados';
+    cls   = 'skew-ok';
+  } else {
+    const who = skew > 0 ? 'Sender +' : 'Local +';
+    const hh  = Math.floor(abs / 3600);
+    const mm  = Math.floor((abs % 3600) / 60);
+    const ss  = Math.round(abs % 60);
+    let t = '';
+    if (hh > 0)      t += `${hh}h `;
+    if (mm > 0)      t += `${mm}m `;
+    t += `${ss}s`;
+    label = `${who}${t.trim()}`;
+    cls   = skew > 0 ? 'skew-ahead-sender' : 'skew-ahead-local';
+  }
+  skewValEl.textContent = label;
+  skewValEl.className   = 'skew-val ' + cls;
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+setInterval(() => {
+  const d = new Date();
+  hdrTime.textContent =
+    String(d.getHours()).padStart(2,'0') + ':' +
+    String(d.getMinutes()).padStart(2,'0') + ':' +
+    String(d.getSeconds()).padStart(2,'0');
+}, 1000);
+
+// ── Depth smoothing buffer (UI only, not DB) ────────────────────────────────
+const _hdBuf = [], _bdBuf = [];  // last 3 values for moving average
+function smoothDepth(buf, val) {
+  if (val === null) return null;
+  buf.push(val);
+  if (buf.length > 3) buf.shift();
+  return buf.reduce((a, b) => a + b, 0) / buf.length;
+}
+
+// ── Apply data packet ─────────────────────────────────────────────────────────
+let lastTs = 0;
+let _lastGamma      = null;  // persist last non-null gamma for display
+let _lastGammaDepth = null;
+let _lastGammaTs    = null;  // last gamma_ts seen — change means new TCP packet
+let _pendingFresh   = false; // latched True when new gamma_ts detected, cleared after store push
+
+function applyData(d) {
+  if (!d || typeof d !== 'object') return;
+
+  const hdRaw = d.hole_depth != null ? Number(d.hole_depth) : null;
+  const bdRaw = d.bit_depth  != null ? Number(d.bit_depth)  : null;
+  const hd  = smoothDepth(_hdBuf, hdRaw);  // smoothed for UI only
+  const bd  = smoothDepth(_bdBuf, bdRaw);  // smoothed for UI only
+  const wob = d.wob  != null ? Number(d.wob)  : null;
+  const rpm = d.rpm  != null ? Number(d.rpm)  : null;
+  const flow= d.flow != null ? Number(d.flow) : null;
+  const rop = d.rop  != null ? Number(d.rop)  : null;
+  const spp = d.spp  != null ? Number(d.spp)  : null;
+  if (d.gamma_ts != null && d.gamma_ts !== _lastGammaTs) {
+    _lastGammaTs  = d.gamma_ts;
+    _pendingFresh = true;  // latch until next store push
+  }
+
+  // Update right panel
+  rpHD.textContent    = fmt(hd,   2);
+  rpBD.textContent    = fmt(bd,   2);
+  rpWOB.textContent   = fmt(wob,  2);
+  rpRPM.textContent   = fmt(rpm,  1);
+  rpFlow.textContent  = fmt(flow, 1);
+  rpROP.textContent   = fmt(rop,  2);
+  rpSPP.textContent   = fmt(spp,  0);
+  const gammaRaw      = d.gamma       != null ? Number(d.gamma)       : null;
+  const gammaDepthRaw = d.gamma_depth != null ? Number(d.gamma_depth) : null;
+  if (gammaRaw      !== null) _lastGamma      = gammaRaw;
+  if (gammaDepthRaw !== null) _lastGammaDepth = gammaDepthRaw;
+  const gamma      = _lastGamma;
+  const gammaDepth = _lastGammaDepth;
+  rpGamma.textContent      = fmt(gamma,      1);
+  document.getElementById('rpGammaDepth').textContent = fmt(gammaDepth, 2);
+
+  // Update bottom boxes
+  bxHD.textContent   = fmt(hd,   2);
+  bxBD.textContent   = fmt(bd,   2);
+  bxWOB.textContent  = fmt(wob,  2);
+  bxRPM.textContent  = fmt(rpm,  1);
+  bxFlow.textContent = fmt(flow, 1);
+  bxROP.textContent  = fmt(rop,  2);
+  bxSPP.textContent  = fmt(spp,  0);
+  document.getElementById('bxGammaDepth').textContent = fmt(gammaDepth, 2);
+
+  updateSkewBadge(d.time_skew);
+
+  // Push to store only when depth changes
+  if (hd !== null) {
+    const prev = S.depth.length > 0 ? S.depth[S.depth.length - 1] : null;
+    if (prev === null || Math.abs(hd - prev) > 0.001) {
+      S.depth.push(hd);
+      S.ts.push(d.ts ?? (Date.now()/1000));
+      S.hd.push(hd);
+      S.bd.push(bd ?? hd);
+      S.wob.push(wob);
+      S.spp.push(spp);
+      S.rpm.push(rpm);
+      S.flow.push(flow);
+      S.rop.push(rop);
+      S.gamma.push(_pendingFresh ? gammaRaw : null);      // only plot on fresh TCP packet
+      S.gammaDepth.push(_pendingFresh ? gammaDepthRaw : null);
+      _pendingFresh = false;  // consumed
+
+      // Trim to MAX_PTS
+      if (S.depth.length > MAX_PTS) {
+        const trim = S.depth.length - MAX_PTS;
+        Object.keys(S).forEach(k => S[k].splice(0, trim));
+        if (viewOffset > 0) viewOffset = Math.max(0, viewOffset - trim);
+      }
+      updateZoomLabel();
+
+      // Only auto-redraw if live (not scrolled back)
+      if (viewOffset === 0) redrawAll();
+    }
+  }
+
+  // Live indicator
+  if (d.ts && d.ts !== lastTs) {
+    lastTs = d.ts;
+    setLive(true);
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => setLive(false), 6000);
+  }
+}
+
+// ── Socket.IO ─────────────────────────────────────────────────────────────────
+const socket = io({ transports: ['websocket', 'polling'] });
+socket.on('connect',     () => setLive(false));
+socket.on('disconnect',  () => setLive(false));
+socket.on('data_update', applyData);
+
+// ── Polling fallback ──────────────────────────────────────────────────────────
+async function poll() {
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    if (r && r.ok) applyData(await r.json());
+  } catch (_) {}
+}
+setInterval(poll, POLL_MS);
+poll();
+
+// ── Load history from DB on startup ──────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const r = await fetch(`/api/history?limit=${MAX_PTS}`);
+    if (!r || !r.ok) return;
+    const rows = await r.json();
+    rows.forEach(row => {
+      const hd = row.hole_depth;
+      if (hd == null) return;
+      S.depth.push(Number(hd));
+      S.ts.push(row.ts != null ? Number(row.ts) : Date.now()/1000);
+      S.hd.push(Number(hd));
+      S.bd.push(row.bit_depth != null ? Number(row.bit_depth) : Number(hd));
+      S.wob.push(row.wob   != null ? Number(row.wob)  : null);
+      S.spp.push(row.spp   != null ? Number(row.spp)  : null);
+      S.rpm.push(row.rpm   != null ? Number(row.rpm)  : null);
+      S.flow.push(row.flow   != null ? Number(row.flow)  : null);
+      S.rop.push(row.rop     != null ? Number(row.rop)   : null);
+      S.gamma.push(row.gamma       != null ? Number(row.gamma)       : null);
+      S.gammaDepth.push(row.gamma_depth != null ? Number(row.gamma_depth) : null);
+    });
+    if (S.depth.length > MAX_PTS) {
+      const trim = S.depth.length - MAX_PTS;
+      Object.keys(S).forEach(k => S[k].splice(0, trim));
+    }
+    updateZoomLabel();
+    requestAnimationFrame(() => drawWhenReady(30));
+  } catch (_) {}
+}
+loadHistory();
+
+
+// ── Zoom In / Out ─────────────────────────────────────────────────────────────
+const ZOOM_STEPS = [50, 100, 150, 200, 300, 500, 800, 1500, 2000];
+const zoomLabel  = document.getElementById('zoomLabel');
+
+function updateZoomLabel() {
+  const n = S.depth.length;
+  zoomLabel.textContent = `~${viewPts} pts / ${n} total`;
+}
+
+function zoomIn() {
+  const idx = ZOOM_STEPS.indexOf(viewPts);
+  if (idx > 0) viewPts = ZOOM_STEPS[idx - 1];
+  else viewPts = ZOOM_STEPS[0];
+  localStorage.setItem('edr_viewPts', viewPts);
+  updateZoomLabel(); redrawAll();
+}
+
+function zoomOut() {
+  const idx = ZOOM_STEPS.indexOf(viewPts);
+  if (idx >= 0 && idx < ZOOM_STEPS.length - 1) viewPts = ZOOM_STEPS[idx + 1];
+  else viewPts = ZOOM_STEPS[ZOOM_STEPS.length - 1];
+  localStorage.setItem('edr_viewPts', viewPts);
+  updateZoomLabel(); redrawAll();
+}
+
+document.getElementById('btnZoomIn').addEventListener('click',  zoomIn);
+document.getElementById('btnZoomOut').addEventListener('click', zoomOut);
+
+// Keyboard shortcuts + and -
+document.addEventListener('keydown', e => {
+  if (e.key === '+' || e.key === '=') zoomIn();
+  if (e.key === '-' || e.key === '_') zoomOut();
+});
+
+
+// ── Robust initial draw: retry via RAF until canvases have real dimensions ──
+function drawWhenReady(retries) {
+  const allReady = [cvTime, cvDepth, cvWOB, cvSPP, cvRPM, cvGamma].every(
+    cv => cv.parentElement && cv.parentElement.clientWidth > 0 && cv.parentElement.clientHeight > 0
+  );
+  if (allReady) {
+    redrawAll();
+  } else if (retries > 0) {
+    requestAnimationFrame(() => drawWhenReady(retries - 1));
+  }
+}
+requestAnimationFrame(() => drawWhenReady(30));
+
+// Redraw when returning from Export tab (full page reload, history reloaded)
+window.addEventListener('pageshow', () => requestAnimationFrame(() => drawWhenReady(30)));
+window.addEventListener('focus',    () => requestAnimationFrame(() => drawWhenReady(10)));
+</script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EDR SAI — Exportar</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --bg:       #e8e8e8;
+      --panel:    #ffffff;
+      --border:   #c0c0c0;
+      --muted:    #666;
+      --hdr-bg:   #12122a;
+      --hdr-text: #dde;
+      --green:    #00a85a;
+      --blue:     #1455b0;
+      --amber:    #d47800;
+      --red:      #b82020;
+      --header-h: 40px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; background: var(--bg);
+      font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #111;
+    }
+
+    /* ── Header ── */
+    .hdr {
+      height: var(--header-h); background: var(--hdr-bg); color: var(--hdr-text);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 14px; gap: 8px; flex-shrink: 0;
+      border-bottom: 2px solid #060616;
+    }
+    .hdr-left  { display:flex; align-items:center; gap:14px; }
+    .hdr-logo  { font-size:15px; font-weight:900; letter-spacing:2px; color:#7ec8ff; }
+    .nav-link  {
+      font-size:11px; font-weight:700; color:#99aacc;
+      text-decoration:none; padding:4px 8px; border-radius:3px;
+      transition: background .15s, color .15s;
+    }
+    .nav-link:hover  { background:#22224a; color:#dde; }
+    .nav-link.active { background:#1a2a5a; color:#7ec8ff; }
+
+    /* ── Body layout ── */
+    .body-wrap {
+      height: calc(100% - var(--header-h));
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    /* ── Left sidebar: controls ── */
+    .sidebar {
+      background: #f0f0f0;
+      border-right: 2px solid var(--border);
+      overflow-y: auto;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .sb-section { display: flex; flex-direction: column; gap: 8px; }
+    .sb-title {
+      font-size: 10px; font-weight: 900; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid #ccc;
+      padding-bottom: 4px; margin-bottom: 2px;
+    }
+
+    .col-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+    }
+    .col-check {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; cursor: pointer; user-select: none;
+    }
+    .col-check input[type=checkbox] { accent-color: var(--blue); cursor: pointer; }
+
+    label { font-size: 11px; font-weight: 600; color: #444; }
+    input[type=number], input[type=text] {
+      width: 100%; padding: 6px 8px; border: 1px solid #c0c0c0; border-radius: 3px;
+      font-size: 12px; background: #fff; color: #111;
+    }
+    input[type=number]:focus, input[type=text]:focus { outline: none; border-color: #5a8aff; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .field { display: flex; flex-direction: column; gap: 3px; }
+
+    .stat-box {
+      background: var(--panel); border: 1px solid #ccc; border-radius: 4px;
+      padding: 8px 10px; font-size: 11px; color: #444; line-height: 1.7;
+    }
+    .stat-box span { font-weight: 700; color: #111; }
+
+    .btn {
+      width: 100%; padding: 9px 0; border-radius: 4px;
+      border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+      transition: filter .15s;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn-preview { background: #1a3a6a; color: #7ec8ff; }
+    .btn-export  { background: #1a5a1a; color: #6edd6e; }
+    .btn-clear   { background: #5a1a1a; color: #ff9999; font-size: 11px; padding: 6px 0; }
+
+    /* ── Right: preview table ── */
+    .preview-wrap {
+      overflow: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .preview-header {
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .preview-title { font-size: 13px; font-weight: 700; color: #333; }
+    .preview-info  { font-size: 11px; color: var(--muted); }
+
+    .table-wrap { overflow: auto; flex: 1; min-height: 0; border: 1px solid #ccc; border-radius: 4px; }
+    table {
+      border-collapse: collapse; width: 100%;
+      font-size: 11px; font-variant-numeric: tabular-nums;
+    }
+    thead th {
+      background: var(--hdr-bg); color: #99aacc;
+      padding: 7px 10px; text-align: left;
+      font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em;
+      position: sticky; top: 0; z-index: 1;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #eee; }
+    tbody tr:hover { background: #f0f4ff; }
+    tbody td {
+      padding: 5px 10px; color: #222;
+      white-space: nowrap;
+    }
+    .no-data {
+      text-align: center; padding: 40px 20px;
+      color: var(--muted); font-size: 13px;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+
+    /* ── PIN modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.55); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 6px; padding: 24px 28px;
+      width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,.35);
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .modal-title { font-size: 14px; font-weight: 900; color: #b82020; }
+    .modal-msg   { font-size: 12px; color: #555; line-height: 1.5; }
+    .modal input[type=password] {
+      width: 100%; padding: 8px 10px; border: 2px solid #c0c0c0;
+      border-radius: 4px; font-size: 18px; letter-spacing: 4px;
+      text-align: center;
+    }
+    .modal input[type=password]:focus { outline: none; border-color: #b82020; }
+    .modal-err  { font-size: 11px; color: #b82020; min-height: 16px; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-modal-cancel { background: #eee; color: #333; border: none; padding: 7px 16px; border-radius: 4px; cursor: pointer; font-weight: 700; }
+    .btn-modal-ok     { background: #b82020; color: #fff; border: none; padding: 7px 16px; border-radius: 4px; cursor: pointer; font-weight: 700; }
+    .btn-modal-ok:hover { background: #8a1818; }
+    .btn-backup { background: #1a3a3a; color: #6eddd0; font-size: 11px; padding: 6px 0; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">EDR SAI</div>
+    <a href="/" class="nav-link">Monitor</a>
+    <a href="/web" class="nav-link">Web</a>
+    <a href="/export" class="nav-link active">Exportar</a>
+    <a href="/config" class="nav-link">Config</a>
+  </div>
+</div>
+
+<div class="body-wrap">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <!-- Column selector -->
+    <div class="sb-section">
+      <div class="sb-title">Columnas a exportar</div>
+      <div class="col-grid" id="colGrid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- Depth range -->
+    <div class="sb-section">
+      <div class="sb-title">Rango de profundidad (m)</div>
+      <div class="row2">
+        <div class="field">
+          <label>Desde</label>
+          <input type="number" id="depthFrom" placeholder="ej: 2500" step="0.5" />
+        </div>
+        <div class="field">
+          <label>Hasta</label>
+          <input type="number" id="depthTo" placeholder="ej: 2800" step="0.5" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sb-section">
+      <div class="sb-title">Resumen</div>
+      <div class="stat-box" id="statBox">
+        Registros totales: <span id="statTotal">—</span><br>
+        Prof. mín.: <span id="statMin">—</span> m<br>
+        Prof. máx.: <span id="statMax">—</span> m<br>
+        Seleccionados: <span id="statSelected">—</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="sb-section">
+      <button class="btn btn-preview" id="btnPreview">🔍 Previsualizar</button>
+    </div>
+    <div class="sb-section">
+      <button class="btn btn-export" id="btnExport">⬇ Descargar CSV</button>
+    </div>
+    <div class="sb-section">
+      <button class="btn btn-backup" id="btnBackup" title="Guarda una copia de la base de datos ahora">💾 Backup manual</button>
+    </div>
+    <div class="sb-section">
+      <button class="btn btn-clear" id="btnClear" title="Borra todos los registros de la base de datos">⚠ Limpiar base de datos</button>
+    </div>
+
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-wrap">
+    <div class="preview-header">
+      <div class="preview-title">Vista previa</div>
+      <div class="preview-info" id="previewInfo">Presioná "Previsualizar" para ver datos</div>
+    </div>
+    <div class="table-wrap">
+      <div class="no-data" id="noData">Sin datos. Presioná Previsualizar.</div>
+      <table id="previewTable" style="display:none">
+        <thead id="previewThead"></thead>
+        <tbody id="previewTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- PIN Modal -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal">
+    <div class="modal-title">⚠ Limpiar base de datos</div>
+    <div class="modal-msg">Esta acción eliminará <strong>todos los registros</strong>.<br>Se creará un backup automático antes de borrar.<br>Ingresá el PIN para confirmar.</div>
+    <input type="password" id="pinInput" maxlength="8" placeholder="••••" autocomplete="off" />
+    <div class="modal-err" id="pinErr"></div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" id="btnPinCancel">Cancelar</button>
+      <button class="btn-modal-ok"     id="btnPinOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Column definitions ────────────────────────────────────────────────────────
+const ALL_COLS = [
+  { key: 'tcp_date',   label: 'Fecha TCP' },
+  { key: 'id',         label: 'ID' },
+  { key: 'ts',         label: 'Timestamp' },
+  { key: 'hole_depth', label: 'Hole Depth' },
+  { key: 'bit_depth',  label: 'Bit Depth' },
+  { key: 'wob',        label: 'WOB' },
+  { key: 'rpm',        label: 'RPM' },
+  { key: 'flow',       label: 'Flow' },
+  { key: 'rop',        label: 'ROP' },
+  { key: 'spp',        label: 'SPP' },
+  { key: 'gamma',       label: 'Gamma' },
+  { key: 'gamma_depth', label: 'Gamma Depth' },
+];
+
+// Default: all except id
+const DEFAULT_CHECKED = new Set(['tcp_date','ts','hole_depth','bit_depth','wob','rpm','flow','rop','spp','gamma','gamma_depth']);
+
+// ── Build column checkboxes ───────────────────────────────────────────────────
+const colGrid = document.getElementById('colGrid');
+ALL_COLS.forEach(c => {
+  const lbl = document.createElement('label');
+  lbl.className = 'col-check';
+  const cb = document.createElement('input');
+  cb.type    = 'checkbox';
+  cb.id      = 'chk_' + c.key;
+  cb.value   = c.key;
+  cb.checked = DEFAULT_CHECKED.has(c.key);
+  lbl.appendChild(cb);
+  lbl.appendChild(document.createTextNode(c.label));
+  colGrid.appendChild(lbl);
+});
+
+function selectedCols() {
+  return ALL_COLS
+    .filter(c => document.getElementById('chk_' + c.key)?.checked)
+    .map(c => c.key);
+}
+
+// ── Build query string ────────────────────────────────────────────────────────
+function buildQuery() {
+  const cols  = selectedCols().join(',');
+  const from_ = document.getElementById('depthFrom').value.trim();
+  const to_   = document.getElementById('depthTo').value.trim();
+  const p     = new URLSearchParams();
+  if (cols) p.set('cols', cols);
+  if (from_) p.set('from', from_);
+  if (to_)   p.set('to',   to_);
+  return p.toString();
+}
+
+// ── Stat box ──────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch('/api/export/preview?cols=hole_depth&limit=1');
+    if (!r || !r.ok) return;
+    const js = await r.json();
+    document.getElementById('statTotal').textContent = js.total ?? '—';
+    if (js.rows && js.rows.length) {
+      // fetch min/max via full call
+      const r2 = await fetch('/api/history?limit=1');
+      // just show totals; min/max computed from preview
+    }
+  } catch (_) {}
+}
+
+// refresh stats after any preview
+function updateStats(total, rows) {
+  document.getElementById('statTotal').textContent = total ?? '—';
+  if (rows && rows.length) {
+    const depths = rows.map(r => r.hole_depth).filter(x => x != null);
+    document.getElementById('statMin').textContent = depths.length ? Math.min(...depths).toFixed(2) : '—';
+    document.getElementById('statMax').textContent = depths.length ? Math.max(...depths).toFixed(2) : '—';
+  }
+  document.getElementById('statSelected').textContent = total ?? '—';
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+const btnPreview   = document.getElementById('btnPreview');
+const noData       = document.getElementById('noData');
+const previewTable = document.getElementById('previewTable');
+const previewThead = document.getElementById('previewThead');
+const previewTbody = document.getElementById('previewTbody');
+const previewInfo  = document.getElementById('previewInfo');
+
+btnPreview.addEventListener('click', async () => {
+  btnPreview.textContent = '⏳ Cargando...';
+  btnPreview.disabled    = true;
+
+  try {
+    const r = await fetch('/api/export/preview?' + buildQuery());
+    if (!r || !r.ok) throw new Error('HTTP ' + r.status);
+    const js = await r.json();
+
+    const cols = js.cols || [];
+    const rows = js.rows || [];
+    const total= js.total ?? 0;
+
+    updateStats(total, rows);
+
+    if (!rows.length) {
+      noData.textContent = 'Sin datos para los filtros aplicados.';
+      noData.style.display = '';
+      previewTable.style.display = 'none';
+      previewInfo.textContent = '0 registros';
+    } else {
+      // Build header
+      previewThead.innerHTML = '';
+      const tr = document.createElement('tr');
+      cols.forEach(c => {
+        const th = document.createElement('th');
+        th.textContent = c.toUpperCase().replace('_', ' ');
+        tr.appendChild(th);
+      });
+      previewThead.appendChild(tr);
+
+      // Build body
+      previewTbody.innerHTML = '';
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        cols.forEach(c => {
+          const td = document.createElement('td');
+          const v  = row[c];
+          if (v === null || v === undefined) {
+            td.textContent = '—';
+            td.style.color = '#aaa';
+          } else if (c === 'ts') {
+            td.textContent = v;
+          } else {
+            td.textContent = typeof v === 'number'
+              ? v.toFixed(c === 'spp' || c === 'id' ? 0 : (c === 'hole_depth' || c === 'bit_depth' ? 1 : 2))
+              : v;
+          }
+          tr.appendChild(td);
+        });
+        previewTbody.appendChild(tr);
+      });
+
+      noData.style.display = 'none';
+      previewTable.style.display = '';
+      previewInfo.textContent =
+        `Mostrando ${rows.length} de ${total} registros (primeros 50 en pantalla)`;
+    }
+  } catch (e) {
+    noData.textContent = 'Error al cargar datos: ' + e.message;
+    noData.style.display = '';
+    previewTable.style.display = 'none';
+    previewInfo.textContent = 'Error';
+  } finally {
+    btnPreview.textContent = '🔍 Previsualizar';
+    btnPreview.disabled    = false;
+  }
+});
+
+// ── Export CSV ────────────────────────────────────────────────────────────────
+document.getElementById('btnExport').addEventListener('click', () => {
+  const qs  = buildQuery();
+  const url = '/api/export/csv?' + qs;
+  const a   = document.createElement('a');
+  a.href     = url;
+  a.download = 'edr_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+// ── Backup manual ──────────────────────────────────────────────────────────
+document.getElementById('btnBackup').addEventListener('click', async () => {
+  const btn = document.getElementById('btnBackup');
+  btn.textContent = '⏳ Guardando...';
+  btn.disabled = true;
+  try {
+    const r  = await fetch('/api/backup/now', { method: 'POST' });
+    const js = await r.json();
+    btn.textContent = `✓ Backup OK (${js.files} archivos)`;
+    setTimeout(() => { btn.textContent = '💾 Backup manual'; btn.disabled = false; }, 3000);
+  } catch (_) {
+    btn.textContent = '⚠ Error en backup';
+    setTimeout(() => { btn.textContent = '💾 Backup manual'; btn.disabled = false; }, 3000);
+  }
+});
+
+// ── Clear DB con PIN ────────────────────────────────────────────────────────
+const pinModal    = document.getElementById('pinModal');
+const pinInput    = document.getElementById('pinInput');
+const pinErr      = document.getElementById('pinErr');
+const btnPinOk    = document.getElementById('btnPinOk');
+const btnPinCancel= document.getElementById('btnPinCancel');
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  pinInput.value  = '';
+  pinErr.textContent = '';
+  pinModal.classList.add('open');
+  setTimeout(() => pinInput.focus(), 50);
+});
+
+btnPinCancel.addEventListener('click', () => pinModal.classList.remove('open'));
+pinModal.addEventListener('click', e => { if (e.target === pinModal) pinModal.classList.remove('open'); });
+pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') btnPinOk.click(); });
+
+btnPinOk.addEventListener('click', async () => {
+  const pin = pinInput.value.trim();
+  if (!pin) { pinErr.textContent = 'Ingresá el PIN.'; return; }
+  btnPinOk.disabled = true;
+  btnPinOk.textContent = 'Verificando...';
+  try {
+    const r  = await fetch('/api/db/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin }),
+    });
+    const js = await r.json();
+    if (js.ok) {
+      pinModal.classList.remove('open');
+      previewTbody.innerHTML = '';
+      previewThead.innerHTML = '';
+      noData.textContent     = '✓ Base de datos limpiada. Backup guardado automáticamente.';
+      noData.style.display   = '';
+      previewTable.style.display = 'none';
+      previewInfo.textContent    = '0 registros';
+      updateStats(0, []);
+    } else {
+      pinErr.textContent = '⚠ PIN incorrecto. Intentá de nuevo.';
+      pinInput.value = '';
+      pinInput.focus();
+    }
+  } catch (_) {
+    pinErr.textContent = 'Error de conexión.';
+  } finally {
+    btnPinOk.disabled = false;
+    btnPinOk.textContent = 'Confirmar';
+  }
+});
+
+// Load initial stats
+loadStats();
+</script>
+</body>
+</html>

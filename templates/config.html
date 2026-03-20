@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EDR SAI — Config</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --bg:       #e8e8e8;
+      --panel:    #ffffff;
+      --border:   #c0c0c0;
+      --muted:    #666;
+      --hdr-bg:   #12122a;
+      --hdr-text: #dde;
+      --green:    #00a85a;
+      --blue:     #1455b0;
+      --amber:    #d47800;
+      --red:      #b82020;
+      --cyan:     #007a8a;
+      --header-h: 40px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; background: var(--bg);
+      font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #111;
+    }
+
+    /* ── Header ── */
+    .hdr {
+      height: var(--header-h); background: var(--hdr-bg); color: var(--hdr-text);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 14px; gap: 8px; flex-shrink: 0;
+      border-bottom: 2px solid #060616;
+    }
+    .hdr-left  { display:flex; align-items:center; gap:14px; }
+    .hdr-logo  { font-size:15px; font-weight:900; letter-spacing:2px; color:#7ec8ff; }
+    .nav-link  {
+      font-size:11px; font-weight:700; color:#99aacc;
+      text-decoration:none; padding:4px 8px; border-radius:3px;
+      transition: background .15s, color .15s;
+    }
+    .nav-link:hover  { background:#22224a; color:#dde; }
+    .nav-link.active { background:#1a2a5a; color:#7ec8ff; }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 700px;
+      margin: 28px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 0 16px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .card-hdr {
+      background: #f4f4f4;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      font-size: 11px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-hdr .icon { font-size: 14px; }
+    .card-body { padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── Form rows ── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 700; color: #444; }
+    .field input, .field select {
+      padding: 8px 10px; border: 1px solid #c0c0c0; border-radius: 4px;
+      font-size: 13px; background: #fff; color: #111;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: #5a8aff; }
+    .field .hint { font-size: 10px; color: var(--muted); }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      padding: 9px 20px; border-radius: 4px; border: none;
+      cursor: pointer; font-size: 13px; font-weight: 700;
+      transition: filter .15s;
+    }
+    .btn:hover { filter: brightness(1.12); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+    .btn-primary { background: #1a3a6a; color: #7ec8ff; }
+    .btn-danger  { background: #5a1a1a; color: #ff9999; }
+    .btn-neutral { background: #ddd; color: #333; }
+
+    .status-msg {
+      font-size: 11px; font-weight: 700; min-height: 18px;
+    }
+    .ok  { color: var(--green); }
+    .err { color: var(--red); }
+
+    /* ── Gamma depth preview ── */
+    .preview-box {
+      background: #f8f8ff;
+      border: 1px solid #c0c8e8;
+      border-radius: 4px;
+      padding: 12px 14px;
+      font-size: 12px; color: #333; line-height: 1.9;
+    }
+    .preview-box strong { color: #1a3a6a; }
+    .preview-val { font-size: 15px; font-weight: 900; color: #8800cc; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">EDR SAI</div>
+    <a href="/"       class="nav-link">Monitor</a>
+    <a href="/web"    class="nav-link">Web</a>
+    <a href="/export" class="nav-link">Exportar</a>
+    <a href="/config" class="nav-link active">Config</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ── Gamma Sensor Offset ── -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="icon">🎯</span> Sensor de Gamma — Offset de profundidad
+    </div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#555;line-height:1.6;">
+        La sonda de gamma está ubicada a cierta distancia <em>por encima</em> de la broca.
+        La <strong>profundidad real de gamma</strong> se calcula como:<br>
+        <code style="background:#eee;padding:2px 6px;border-radius:3px;font-size:12px;">
+          Profundidad Gamma = Bit Depth − Offset
+        </code>
+      </p>
+
+      <div class="field">
+        <label>Offset del sensor gamma (metros)</label>
+        <input type="number" id="gammaOffset" min="0" max="200" step="0.1" value="15.0" style="max-width:180px;" />
+        <span class="hint">Distancia entre la broca y el sensor gamma. Valor típico: 10–25 m.</span>
+      </div>
+
+      <div class="preview-box" id="gammaPreview">
+        Cargando valores actuales...
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSaveGamma">💾 Guardar offset</button>
+        <span class="status-msg" id="msgGamma"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Puerto Serial ── -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="icon">🔌</span> Puerto Serial (WITS)
+    </div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#555;line-height:1.6;">
+        Configurá el puerto COM al que está conectado el equipo WITS.
+        Si el simulador está activo, se detendrá al guardar un puerto.
+      </p>
+
+      <div class="row2">
+        <div class="field">
+          <label>Puerto COM</label>
+          <select id="cfgPort">
+            <option value="">— Sin puerto —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Baud rate</label>
+          <select id="cfgBaud">
+            <option value="1200">1200</option>
+            <option value="2400">2400</option>
+            <option value="4800">4800</option>
+            <option value="9600">9600</option>
+            <option value="19200" selected>19200</option>
+            <option value="38400">38400</option>
+            <option value="57600">57600</option>
+            <option value="115200">115200</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-neutral" id="btnRefreshPorts">🔄 Actualizar puertos</button>
+        <button class="btn btn-primary" id="btnSaveSerial">💾 Guardar y conectar</button>
+        <span class="status-msg" id="msgSerial"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TCP Gamma Receiver ── -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="icon">📡</span> Receptor Gamma TCP/IP
+    </div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#555;line-height:1.6;">
+        Escucha conexiones TCP entrantes desde la otra laptop.<br>
+        La app remota debe enviar: <code style="background:#eee;padding:2px 6px;border-radius:3px;">GAMA=88.00\n</code>
+      </p>
+
+      <div class="row2">
+        <div class="field">
+          <label>Puerto TCP de escucha</label>
+          <input type="number" id="tcpPort" min="1024" max="65535" step="1" value="5000" style="max-width:140px;" />
+          <span class="hint">Por defecto: 5000. Debe coincidir con el puerto de la app remota.</span>
+        </div>
+        <div class="field">
+          <label>Estado</label>
+          <div class="preview-box" id="tcpStatus" style="padding:8px 10px;">
+            Cargando...
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSaveTcp">💾 Guardar puerto</button>
+        <button class="btn btn-neutral" id="btnRefreshTcp">🔄 Actualizar estado</button>
+        <span class="status-msg" id="msgTcp"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Códigos WITS ── -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="icon">🔢</span> Códigos WITS por parámetro
+    </div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#555;line-height:1.6;">
+        Asigná el código WITS (4 dígitos) a cada parámetro de perforación.<br>
+        <strong>Bit Depth y Hole Depth</strong> se leen exclusivamente del puerto serial cuando está configurado.
+      </p>
+      <table id="witsTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
+        <thead>
+          <tr style="background:#e8eaf0;text-align:left;">
+            <th style="padding:6px 10px;font-weight:700;color:#334;border-bottom:2px solid #ccd;">Parámetro</th>
+            <th style="padding:6px 10px;font-weight:700;color:#334;border-bottom:2px solid #ccd;">Código WITS</th>
+            <th style="padding:6px 10px;font-weight:700;color:#334;border-bottom:2px solid #ccd;">Fuente</th>
+          </tr>
+        </thead>
+        <tbody id="witsBody">
+        </tbody>
+      </table>
+      <div class="btn-row" style="margin-top:12px;">
+        <button class="btn btn-primary" id="btnSaveWits">💾 Guardar códigos WITS</button>
+        <span class="status-msg" id="msgWits"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Simulador ── -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="icon">⚙</span> Simulador de perforación
+    </div>
+    <div class="card-body">
+      <p style="font-size:12px;color:#555;line-height:1.6;">
+        El simulador genera datos sintéticos de perforación para pruebas.<br>
+        ROP ~60 m/hr, gamma cíclico entre bandas de 35–60 y 130–180 API.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSimStart">▶ Iniciar simulador</button>
+        <button class="btn btn-danger"  id="btnSimStop">■ Detener simulador</button>
+        <span class="status-msg" id="msgSim"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ── Load current config ───────────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const [rApp, rSerial, rState, rPorts, rSim, rTcp, rWits] = await Promise.all([
+      fetch('/api/config/app'),
+      fetch('/api/config/serial'),
+      fetch('/api/state'),
+      fetch('/api/ports'),
+      fetch('/api/simulator/status'),
+      fetch('/api/tcp/status'),
+      fetch('/api/config/wits'),
+    ]);
+    const app    = await rApp.json();
+    const serial = await rSerial.json();
+    const state  = await rState.json();
+    const ports  = await rPorts.json();
+    const sim    = await rSim.json();
+    const tcp    = await rTcp.json();
+    const wits   = await rWits.json();
+
+    // Gamma offset
+    document.getElementById('gammaOffset').value = app.gamma_offset ?? 15.0;
+    updateGammaPreview(app.gamma_offset ?? 15.0, state);
+
+    // TCP port
+    document.getElementById('tcpPort').value = app.tcp_port ?? 5000;
+    updateTcpStatus(tcp);
+
+    // WITS map
+    buildWitsTable(wits.wits_map || {});
+
+    // Serial
+    const portEl = document.getElementById('cfgPort');
+    portEl.innerHTML = '<option value="">— Sin puerto —</option>';
+    (ports.ports || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      if (p === serial.port) o.selected = true;
+      portEl.appendChild(o);
+    });
+    if (serial.baud) document.getElementById('cfgBaud').value = String(serial.baud);
+
+    // Sim status
+    updateSimBtns(sim.running);
+  } catch (e) {
+    console.error('loadConfig error', e);
+  }
+}
+
+// ── WITS table ────────────────────────────────────────────────────────────────
+const WITS_FIELDS = [
+  { key: 'hole_depth', label: 'Hole Depth',          unit: 'm',      serial: true  },
+  { key: 'bit_depth',  label: 'Bit Depth',            unit: 'm',      serial: true  },
+  { key: 'wob',        label: 'Weight on Bit (WOB)',  unit: 't',      serial: false },
+  { key: 'rpm',        label: 'Rotary RPM',            unit: 'rpm',    serial: false },
+  { key: 'rop',        label: 'Rate of Penetration',  unit: 'm/hr',   serial: false },
+  { key: 'spp',        label: 'Standpipe Pressure',   unit: 'psi',    serial: false },
+  { key: 'flow',       label: 'Caudal (Flow)',         unit: 'gal/min',serial: false },
+  { key: 'gamma',      label: 'Gamma Ray',             unit: 'API',    serial: false, tcp: true },
+];
+
+function buildWitsTable(witsMap) {
+  // invert: field -> code
+  const fieldToCode = {};
+  Object.entries(witsMap).forEach(([code, field]) => { fieldToCode[field] = code; });
+
+  const tbody = document.getElementById('witsBody');
+  tbody.innerHTML = '';
+  WITS_FIELDS.forEach(f => {
+    const code = fieldToCode[f.key] || '';
+    const srcBadge = f.serial
+      ? '<span style="background:#1a3a6a;color:#7ec8ff;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;">COM Serial</span>'
+      : f.tcp
+        ? '<span style="background:#3a1a6a;color:#cc88ff;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;">TCP/IP</span>'
+        : '<span style="background:#1a3a1a;color:#6edd6e;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;">Simulador</span>';
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #e0e4f0';
+    tr.innerHTML =
+      `<td style="padding:6px 10px;">${f.label} <span style="color:#999;font-size:10px;">(${f.unit})</span></td>` +
+      `<td style="padding:6px 10px;"><input data-field="${f.key}" type="text" maxlength="4" value="${code}" ` +
+      `style="width:70px;border:1px solid #bbc;border-radius:3px;padding:4px 6px;font-family:monospace;font-size:13px;text-align:center;" /></td>` +
+      `<td style="padding:6px 10px;">${srcBadge}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('btnSaveWits').addEventListener('click', async () => {
+  const inputs = document.querySelectorAll('#witsBody input[data-field]');
+  const witsMap = {};
+  let hasError = false;
+  inputs.forEach(inp => {
+    const code  = inp.value.trim().padStart(4, '0').slice(-4);
+    const field = inp.dataset.field;
+    if (code && code !== '0000') {
+      if (!/^\d{4}$/.test(code)) { hasError = true; inp.style.borderColor = '#b82020'; return; }
+      inp.style.borderColor = '#bbc';
+      witsMap[code] = field;
+    }
+  });
+  if (hasError) { showMsg('msgWits', '⚠ Código inválido (4 dígitos numéricos).', 'err'); return; }
+  try {
+    const r  = await fetch('/api/config/wits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wits_map: witsMap }),
+    });
+    const js = await r.json();
+    if (js.ok) showMsg('msgWits', '✓ Códigos WITS guardados.', 'ok');
+  } catch (_) { showMsg('msgWits', 'Error de conexión.', 'err'); }
+});
+
+function updateTcpStatus(tcp) {
+  const el = document.getElementById('tcpStatus');
+  if (!tcp) { el.textContent = 'Sin datos'; return; }
+  const running = tcp.running;
+  const ago = tcp.last_ts ? Math.round(Date.now()/1000 - tcp.last_ts) : null;
+  const lastVal = tcp.last_gamma != null ? `${tcp.last_gamma} API` : '—';
+  const agoStr  = ago != null ? (ago < 60 ? `hace ${ago}s` : `hace ${Math.round(ago/60)}min`) : 'nunca';
+  el.innerHTML =
+    `<span style="color:${running ? '#00a85a' : '#b82020'};font-weight:900;">${running ? '● Escuchando' : '✗ Detenido'}</span> · Puerto: <strong>${tcp.port}</strong><br>` +
+    `Último valor: <strong style="color:#8800cc">${lastVal}</strong> (${agoStr})`;
+}
+
+function updateGammaPreview(offset, state) {
+  const bd  = state?.bit_depth;
+  const gd  = bd != null ? (bd - offset).toFixed(2) : '—';
+  const bdFmt = bd != null ? Number(bd).toFixed(2) : '—';
+  document.getElementById('gammaPreview').innerHTML =
+    `Bit Depth actual: <strong>${bdFmt} m</strong><br>` +
+    `Offset configurado: <strong>${Number(offset).toFixed(1)} m</strong><br>` +
+    `Profundidad Gamma: <span class="preview-val">${gd} m</span>`;
+}
+
+// Live update of preview when offset field changes
+document.getElementById('gammaOffset').addEventListener('input', async () => {
+  const offset = parseFloat(document.getElementById('gammaOffset').value) || 0;
+  try {
+    const r = await fetch('/api/state');
+    const state = await r.json();
+    updateGammaPreview(offset, state);
+  } catch (_) {
+    updateGammaPreview(offset, {});
+  }
+});
+
+// ── Save gamma offset ─────────────────────────────────────────────────────────
+document.getElementById('btnSaveGamma').addEventListener('click', async () => {
+  const offset = parseFloat(document.getElementById('gammaOffset').value);
+  if (isNaN(offset) || offset < 0) {
+    showMsg('msgGamma', '⚠ Valor inválido.', 'err'); return;
+  }
+  try {
+    const r  = await fetch('/api/config/app', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gamma_offset: offset }),
+    });
+    const js = await r.json();
+    if (js.ok) {
+      showMsg('msgGamma', `✓ Guardado: ${js.gamma_offset.toFixed(1)} m`, 'ok');
+      const rs = await fetch('/api/state');
+      updateGammaPreview(offset, await rs.json());
+    }
+  } catch (_) { showMsg('msgGamma', 'Error de conexión.', 'err'); }
+});
+
+// ── TCP port ──────────────────────────────────────────────────────────────────
+document.getElementById('btnSaveTcp').addEventListener('click', async () => {
+  const port = parseInt(document.getElementById('tcpPort').value);
+  if (isNaN(port) || port < 1024 || port > 65535) {
+    showMsg('msgTcp', '⚠ Puerto inválido (1024–65535).', 'err'); return;
+  }
+  try {
+    const r  = await fetch('/api/config/app', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tcp_port: port }),
+    });
+    const js = await r.json();
+    if (js.ok) {
+      showMsg('msgTcp', `✓ Servidor TCP reiniciado en puerto ${js.tcp_port}`, 'ok');
+      setTimeout(async () => {
+        const rt = await fetch('/api/tcp/status');
+        updateTcpStatus(await rt.json());
+      }, 1500);
+    }
+  } catch (_) { showMsg('msgTcp', 'Error de conexión.', 'err'); }
+});
+
+document.getElementById('btnRefreshTcp').addEventListener('click', async () => {
+  try {
+    const r = await fetch('/api/tcp/status');
+    updateTcpStatus(await r.json());
+  } catch (_) {}
+});
+
+// Auto-refresh TCP status every 5s
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/tcp/status');
+    updateTcpStatus(await r.json());
+  } catch (_) {}
+}, 5000);
+
+// ── Serial port ───────────────────────────────────────────────────────────────
+document.getElementById('btnRefreshPorts').addEventListener('click', async () => {
+  try {
+    const r  = await fetch('/api/ports');
+    const js = await r.json();
+    const portEl = document.getElementById('cfgPort');
+    const cur = portEl.value;
+    portEl.innerHTML = '<option value="">— Sin puerto —</option>';
+    (js.ports || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      if (p === cur) o.selected = true;
+      portEl.appendChild(o);
+    });
+  } catch (_) {}
+});
+
+document.getElementById('btnSaveSerial').addEventListener('click', async () => {
+  const port = document.getElementById('cfgPort').value;
+  const baud = Number(document.getElementById('cfgBaud').value);
+  try {
+    const r  = await fetch('/api/config/serial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port, baud }),
+    });
+    const js = await r.json();
+    if (js.ok) {
+      const msg = port ? `✓ Conectando a ${port} @ ${baud}` : '✓ Guardado (sin puerto)';
+      showMsg('msgSerial', msg, 'ok');
+    }
+  } catch (_) { showMsg('msgSerial', 'Error de conexión.', 'err'); }
+});
+
+// ── Simulator ─────────────────────────────────────────────────────────────────
+function updateSimBtns(running) {
+  document.getElementById('btnSimStart').disabled = running;
+  document.getElementById('btnSimStop').disabled  = !running;
+  showMsg('msgSim', running ? '● En ejecución' : '○ Detenido', running ? 'ok' : '');
+}
+
+document.getElementById('btnSimStart').addEventListener('click', async () => {
+  try {
+    await fetch('/api/simulator', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start' }),
+    });
+    updateSimBtns(true);
+  } catch (_) { showMsg('msgSim', 'Error.', 'err'); }
+});
+
+document.getElementById('btnSimStop').addEventListener('click', async () => {
+  try {
+    await fetch('/api/simulator', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'stop' }),
+    });
+    updateSimBtns(false);
+  } catch (_) { showMsg('msgSim', 'Error.', 'err'); }
+});
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+function showMsg(id, text, cls) {
+  const el = document.getElementById(id);
+  el.textContent  = text;
+  el.className    = 'status-msg ' + (cls || '');
+  if (cls === 'ok') setTimeout(() => { el.textContent = ''; }, 4000);
+}
+
+loadConfig();
+</script>
+</body>
+</html>
