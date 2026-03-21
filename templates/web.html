@@ -321,7 +321,6 @@
     const COMPASS_SPACE_COUNT = 6;
     const COMPASS_POINT_COUNT = 5;
     const tfaTrail = []; // newest first
-    let lastTfaSampleKey = null;
 
     function nowHms() {
       const d = new Date();
@@ -396,6 +395,13 @@
 
     function pushTfaTrail(tfa) {
       if (!tfa) return;
+      // Only push when value actually changes (deduplicate by rounded value)
+      const rounded = Math.round(tfa.value * 10) / 10;
+      if (tfaTrail.length > 0) {
+        const lastRounded = Math.round(tfaTrail[0].value * 10) / 10;
+        if (Math.abs(rounded - lastRounded) < 0.5) return; // same value, update in place
+        // Value changed: shift current [0] to [1], new value becomes [0]
+      }
       tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
       if (tfaTrail.length > COMPASS_POINT_COUNT) {
         tfaTrail.splice(COMPASS_POINT_COUNT);
@@ -403,9 +409,10 @@
     }
 
     function trailToCompassPoints() {
+      // idx=0 (newest) → outer ring (r close to 1), older → inner rings
       return tfaTrail.map((p, idx) => ({
         az: p.value,
-        r: (COMPASS_SPACE_COUNT - idx - 0.5) / COMPASS_SPACE_COUNT,
+        r: 1.0 - (idx / COMPASS_SPACE_COUNT),
         color: p.color,
       }));
     }
@@ -436,7 +443,6 @@
         if (maxDepth - d > 50) {
           gammaSeries.splice(0, gammaSeries.length);
           tfaTrail.splice(0, tfaTrail.length);
-          lastTfaSampleKey = null;
           lastGammaTs = null;
           lastGammaFallbackKey = null;
           gammaView.enabled = false;
@@ -754,13 +760,8 @@
 
       const incomingTfa = readIncomingTfa(d);
       if (incomingTfa) {
-        const tfaSampleKey = d.gamma_ts != null
-          ? `gts:${d.gamma_ts}`
-          : (d.ts != null ? `sec:${Math.floor(Number(d.ts))}` : null);
-        if (tfaSampleKey == null || tfaSampleKey !== lastTfaSampleKey) {
-          pushTfaTrail(incomingTfa);
-          if (tfaSampleKey != null) lastTfaSampleKey = tfaSampleKey;
-        }
+        // Always call pushTfaTrail — it deduplicates by value internally
+        pushTfaTrail(incomingTfa);
       }
       if (tfaTrail.length) {
         centerMode.textContent = tfaTrail[0].mode;
