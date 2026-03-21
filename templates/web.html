@@ -410,10 +410,14 @@
 
     function pushTfaTrail(tfa, tfaTsKey) {
       if (!tfa) return;
-      // tfa_ts increments on the server ONLY when a new ingest with gTFA/mTFA arrives
-      // So same tfa_ts = same measurement still broadcasting, skip
-      if (tfaTsKey != null && tfaTsKey === _lastTfaTs) return;
-      _lastTfaTs = tfaTsKey;
+      // Build a dedup key: prefer server tfa_ts counter; fallback to rounded value+mode
+      // (fallback ensures same value repeated in same broadcast doesn't stack up)
+      const key = tfaTsKey != null
+        ? tfaTsKey
+        : `${tfa.mode}:${Math.round(tfa.value * 10)}`;
+      if (key === _lastTfaTs) return;
+      _lastTfaTs = key;
+      // Sliding queue: new value enters [0], everything shifts down one position
       tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
       if (tfaTrail.length > COMPASS_POINT_COUNT) {
         tfaTrail.splice(COMPASS_POINT_COUNT);
