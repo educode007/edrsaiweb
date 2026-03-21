@@ -7,7 +7,7 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 from flask_socketio import SocketIO
 from functools import wraps
 
-app = Flask(__name__)
+app = Flask(__name__)  # v1.1 - login + ui cleanup
 app.config['SECRET_KEY'] = os.environ.get('EDR_SECRET_KEY', 'edrsaiweb-secret-2026')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
