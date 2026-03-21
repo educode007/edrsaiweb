@@ -53,6 +53,7 @@ _latest = {
     'mTFA': None,
     'compass_points': [],
     'ts': 0,
+    'tfa_ts': 0,   # increments only when a new gTFA/mTFA value arrives via ingest
 }
 
 _config = {'gamma_offset': 15.0}
@@ -79,6 +80,7 @@ def _web_payload_snapshot(latest: dict):
     """Minimal read-only payload for EDRsaiWeb visualizations."""
     return {
         'ts': latest.get('ts'),
+        'tfa_ts': latest.get('tfa_ts', 0),
         'hole_depth': latest.get('hole_depth'),
         'gamma_depth': latest.get('gamma_depth'),
         'gamma_offset': _config.get('gamma_offset', 15.0),
@@ -130,12 +132,15 @@ def api_ingest():
     
     with _lock:
         # Update latest state
+        had_tfa = 'gTFA' in data or 'mTFA' in data
         for key in ['hole_depth', 'gamma', 'gamma_depth', 'incl', 'azim', 'gTFA', 'mTFA']:
             if key in data and data[key] is not None:
                 try:
                     _latest[key] = float(data[key])
                 except (ValueError, TypeError):
                     pass
+        if had_tfa:
+            _latest['tfa_ts'] = _latest['tfa_ts'] + 1
         
         if 'compass_points' in data and isinstance(data['compass_points'], list):
             _latest['compass_points'] = data['compass_points']

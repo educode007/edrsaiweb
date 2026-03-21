@@ -408,12 +408,12 @@
 
     let _lastTfaTs = null;
 
-    function pushTfaTrail(tfa, tsKey) {
+    function pushTfaTrail(tfa, tfaTsKey) {
       if (!tfa) return;
-      // Skip only if exact same broadcast timestamp (avoid duplicate on same socket event)
-      if (tsKey != null && tsKey === _lastTfaTs) return;
-      _lastTfaTs = tsKey;
-      // Always push new point regardless of value — new reading = new history entry
+      // tfa_ts increments on the server ONLY when a new ingest with gTFA/mTFA arrives
+      // So same tfa_ts = same measurement still broadcasting, skip
+      if (tfaTsKey != null && tfaTsKey === _lastTfaTs) return;
+      _lastTfaTs = tfaTsKey;
       tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
       if (tfaTrail.length > COMPASS_POINT_COUNT) {
         tfaTrail.splice(COMPASS_POINT_COUNT);
@@ -421,10 +421,14 @@
     }
 
     function trailToCompassPoints() {
-      // idx=0 (newest) → outer ring (r close to 1), older → inner rings
+      // Place each point BETWEEN two consecutive rings, not on a ring line.
+      // Ring i has radius = (R * i) / COMPASS_SPACE_COUNT  (i=1 innermost drawn, i=6 outermost)
+      // idx=0 (newest) → between ring 6 and ring 5  → midpoint r = (5.5/6)
+      // idx=1          → between ring 5 and ring 4  → midpoint r = (4.5/6)
+      // idx=n          → midpoint r = (COMPASS_SPACE_COUNT - idx - 0.5) / COMPASS_SPACE_COUNT
       return tfaTrail.map((p, idx) => ({
         az: p.value,
-        r: 1.0 - (idx / COMPASS_SPACE_COUNT),
+        r: (COMPASS_SPACE_COUNT - idx - 0.5) / COMPASS_SPACE_COUNT,
         color: p.color,
       }));
     }
@@ -779,7 +783,8 @@
 
       const incomingTfa = readIncomingTfa(d);
       if (incomingTfa) {
-        const tfaTsKey = d.gamma_ts != null ? `gts:${d.gamma_ts}` : (d.ts != null ? `ts:${d.ts}` : null);
+        // Use tfa_ts: a counter that only increments on the server when new gTFA/mTFA arrives
+        const tfaTsKey = d.tfa_ts != null ? `tfa:${d.tfa_ts}` : null;
         pushTfaTrail(incomingTfa, tfaTsKey);
       }
       if (tfaTrail.length) {
