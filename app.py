@@ -10,7 +10,7 @@ from functools import wraps
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('EDR_SECRET_KEY', 'edrsaiweb-secret-2026')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 # Credentials: set EDR_USER / EDR_PASSWORD env vars, defaults below
