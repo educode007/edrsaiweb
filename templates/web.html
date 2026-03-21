@@ -406,16 +406,30 @@
       return null;
     }
 
-    let _lastTfaTs = null;
+    const TFA_CHANGE_THRESHOLD = 5; // degrees: less than this = live update, more = new history point
 
-    function pushTfaTrail(tfa, tsKey) {
+    function pushTfaTrail(tfa) {
       if (!tfa) return;
-      // Deduplicate by timestamp: same ts = same broadcast, skip
-      if (tsKey != null && tsKey === _lastTfaTs) return;
-      _lastTfaTs = tsKey;
-      tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
-      if (tfaTrail.length > COMPASS_POINT_COUNT) {
-        tfaTrail.splice(COMPASS_POINT_COUNT);
+      if (tfaTrail.length === 0) {
+        // First point ever: insert as [0]
+        tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
+        return;
+      }
+      // Compare new value against current live point [0]
+      const cur = tfaTrail[0];
+      const diff = Math.abs(tfa.value - cur.value);
+      const wrappedDiff = Math.min(diff, 360 - diff); // handle 359°→1° wrap
+      if (wrappedDiff < TFA_CHANGE_THRESHOLD) {
+        // Value within threshold: update [0] in-place (live tracking, no new ring point)
+        cur.value = tfa.value;
+        cur.mode  = tfa.mode;
+        cur.color = tfa.color;
+      } else {
+        // Value changed significantly: freeze [0] → becomes [1], new value enters as [0]
+        tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
+        if (tfaTrail.length > COMPASS_POINT_COUNT) {
+          tfaTrail.splice(COMPASS_POINT_COUNT);
+        }
       }
     }
 
@@ -778,8 +792,7 @@
 
       const incomingTfa = readIncomingTfa(d);
       if (incomingTfa) {
-        const tfaTsKey = d.gamma_ts != null ? `gts:${d.gamma_ts}` : (d.ts != null ? `ts:${d.ts}` : null);
-        pushTfaTrail(incomingTfa, tfaTsKey);
+        pushTfaTrail(incomingTfa);
       }
       if (tfaTrail.length) {
         centerMode.textContent = tfaTrail[0].mode;
