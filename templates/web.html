@@ -406,30 +406,17 @@
       return null;
     }
 
-    const TFA_CHANGE_THRESHOLD = 5; // degrees: less than this = live update, more = new history point
+    let _lastTfaTs = null;
 
-    function pushTfaTrail(tfa) {
+    function pushTfaTrail(tfa, tsKey) {
       if (!tfa) return;
-      if (tfaTrail.length === 0) {
-        // First point ever: insert as [0]
-        tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
-        return;
-      }
-      // Compare new value against current live point [0]
-      const cur = tfaTrail[0];
-      const diff = Math.abs(tfa.value - cur.value);
-      const wrappedDiff = Math.min(diff, 360 - diff); // handle 359°→1° wrap
-      if (wrappedDiff < TFA_CHANGE_THRESHOLD) {
-        // Value within threshold: update [0] in-place (live tracking, no new ring point)
-        cur.value = tfa.value;
-        cur.mode  = tfa.mode;
-        cur.color = tfa.color;
-      } else {
-        // Value changed significantly: freeze [0] → becomes [1], new value enters as [0]
-        tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
-        if (tfaTrail.length > COMPASS_POINT_COUNT) {
-          tfaTrail.splice(COMPASS_POINT_COUNT);
-        }
+      // Skip only if exact same broadcast timestamp (avoid duplicate on same socket event)
+      if (tsKey != null && tsKey === _lastTfaTs) return;
+      _lastTfaTs = tsKey;
+      // Always push new point regardless of value — new reading = new history entry
+      tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
+      if (tfaTrail.length > COMPASS_POINT_COUNT) {
+        tfaTrail.splice(COMPASS_POINT_COUNT);
       }
     }
 
@@ -792,7 +779,8 @@
 
       const incomingTfa = readIncomingTfa(d);
       if (incomingTfa) {
-        pushTfaTrail(incomingTfa);
+        const tfaTsKey = d.gamma_ts != null ? `gts:${d.gamma_ts}` : (d.ts != null ? `ts:${d.ts}` : null);
+        pushTfaTrail(incomingTfa, tfaTsKey);
       }
       if (tfaTrail.length) {
         centerMode.textContent = tfaTrail[0].mode;
