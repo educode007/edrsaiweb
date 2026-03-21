@@ -406,18 +406,26 @@
       return null;
     }
 
-    let _lastTfaTs = null;
+    let _lastTfaValue = null;   // last pushed value (rounded to 1 decimal)
+    let _lastTfaPushTime = 0;   // timestamp (ms) of last push
+    const TFA_REPEAT_DELAY_MS = 14000; // 14s before pushing a repeated value
 
-    function pushTfaTrail(tfa, tfaTsKey) {
+    function pushTfaTrail(tfa) {
       if (!tfa) return;
-      // Build a dedup key: prefer server tfa_ts counter; fallback to rounded value+mode
-      // (fallback ensures same value repeated in same broadcast doesn't stack up)
-      const key = tfaTsKey != null
-        ? tfaTsKey
-        : `${tfa.mode}:${Math.round(tfa.value * 10)}`;
-      if (key === _lastTfaTs) return;
-      _lastTfaTs = key;
-      // Sliding queue: new value enters [0], everything shifts down one position
+      const rounded = Math.round(tfa.value * 10) / 10;
+      const now = Date.now();
+      const diff = _lastTfaValue == null ? 999 : Math.min(
+        Math.abs(rounded - _lastTfaValue),
+        360 - Math.abs(rounded - _lastTfaValue)
+      );
+      const valueChanged = diff > 1.0;
+      const timedOut = (now - _lastTfaPushTime) >= TFA_REPEAT_DELAY_MS;
+
+      if (!valueChanged && !timedOut) return; // same value, not yet 14s → skip
+
+      _lastTfaValue = rounded;
+      _lastTfaPushTime = now;
+      // Sliding queue: new value enters [0], everything shifts down
       tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
       if (tfaTrail.length > COMPASS_POINT_COUNT) {
         tfaTrail.splice(COMPASS_POINT_COUNT);
@@ -787,9 +795,7 @@
 
       const incomingTfa = readIncomingTfa(d);
       if (incomingTfa) {
-        // Use tfa_ts: a counter that only increments on the server when new gTFA/mTFA arrives
-        const tfaTsKey = d.tfa_ts != null ? `tfa:${d.tfa_ts}` : null;
-        pushTfaTrail(incomingTfa, tfaTsKey);
+        pushTfaTrail(incomingTfa);
       }
       if (tfaTrail.length) {
         centerMode.textContent = tfaTrail[0].mode;
