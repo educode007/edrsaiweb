@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EDR SAI — Acceso</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #e8edf5 0%, #f4f6fb 50%, #dde4f0 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1a2540;
+    }
+
+    /* subtle grid pattern overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(100,130,200,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100,130,200,0.07) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.04), 0 20px 60px rgba(30,60,120,0.12);
+      padding: 48px 44px 40px;
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* top accent bar */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #1a56db, #0ea5e9, #7c3aed);
+      border-radius: 16px 16px 0 0;
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #1a3a8a, #1a56db);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+
+    .logo-badge svg {
+      width: 22px; height: 22px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+
+    .logo-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 0.04em;
+      font-weight: 400;
+    }
+
+    .card-title {
+      font-size: 15px;
+      color: #64748b;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1a2540;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #1a56db;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(26,86,219,0.10);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #1a3a8a, #1a56db);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.18s, transform 0.12s;
+    }
+
+    .btn-login:hover  { opacity: 0.92; }
+    .btn-login:active { transform: scale(0.98); }
+
+    .error-box {
+      background: #fff1f2;
+      border: 1.5px solid #fecdd3;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #be123c;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 28px 0 20px;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <div class="logo-area">
+      <div class="logo-badge">
+        <!-- drill bit / signal icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+        </svg>
+        <div>
+          <div class="logo-text">EDR SAI</div>
+          <div class="logo-sub">Realtime Drilling Intelligence</div>
+        </div>
+      </div>
+      <div class="card-title">Ingresar al sistema de monitoreo</div>
+    </div>
+
+    {% if error %}
+    <div class="error-box">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login" autocomplete="off">
+      <div class="form-group">
+        <label for="username">Usuario</label>
+        <input type="text" id="username" name="username" placeholder="Ingresá tu usuario"
+               autofocus autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="password" placeholder="••••••••"
+               autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn-login">Ingresar</button>
+    </form>
+
+    <hr class="divider" />
+    <p class="footer-note">
+      EDR SAI Web &nbsp;·&nbsp; Monitor de Perforación en Tiempo Real<br />
+      © 2026 Eduardo Pinto
+    </p>
+
+  </div>
+</body>
+</html>

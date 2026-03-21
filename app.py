@@ -3,12 +3,27 @@ import threading
 import time
 import sqlite3
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from flask_socketio import SocketIO
+from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'edrsaiweb-secret'
+app.config['SECRET_KEY'] = os.environ.get('EDR_SECRET_KEY', 'edrsaiweb-secret-2026')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+# Credentials: set EDR_USER / EDR_PASSWORD env vars, defaults below
+_AUTH_USER = os.environ.get('EDR_USER', 'admin')
+_AUTH_PASS = os.environ.get('EDR_PASSWORD', 'edrsai2026')
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated
 
 # ── Database (minimal, ephemeral in Render) ──────────────────────────────────
 def _get_data_dir():
@@ -102,11 +117,31 @@ def _broadcaster():
         socketio.emit('web_update', web_payload)
 
 # ── Flask routes ──────────────────────────────────────────────────────────────
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        if username == _AUTH_USER and password == _AUTH_PASS:
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        error = 'Usuario o contraseña incorrectos.'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login_page'))
+
 @app.route('/')
+@login_required
 def index():
     return render_template('web.html')
 
 @app.route('/web')
+@login_required
 def web_page():
     return render_template('web.html')
 
