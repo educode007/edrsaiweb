@@ -266,9 +266,21 @@
             <div class="box-time" id="inclTime">--:--:--</div>
           </div>
           <div class="box">
-            <div class="box-label">AZIM</div>
+            <div class="box-label" id="azimLabel">AZIM</div>
             <div class="box-val" id="azimVal">—</div>
             <div class="box-time" id="azimTime">--:--:--</div>
+          </div>
+        </div>
+        <div class="box-row">
+          <div class="box">
+            <div class="box-label">HOLE DEPTH</div>
+            <div class="box-val" id="holeDepthVal">—</div>
+            <div class="box-time" id="holeDepthTime">--:--:--</div>
+          </div>
+          <div class="box">
+            <div class="box-label">GAMMA DEPTH</div>
+            <div class="box-val" id="gammaDepthVal">—</div>
+            <div class="box-time" id="gammaDepthTime">--:--:--</div>
           </div>
         </div>
       </div>
@@ -302,6 +314,7 @@
     const clockEl = document.getElementById('clock');
     const inclVal = document.getElementById('inclVal');
     const azimVal = document.getElementById('azimVal');
+    const azimLabel = document.getElementById('azimLabel');
     const gammaVal = document.getElementById('gammaVal');
     const inclTime = document.getElementById('inclTime');
     const azimTime = document.getElementById('azimTime');
@@ -393,15 +406,13 @@
       return null;
     }
 
-    function pushTfaTrail(tfa) {
+    let _lastTfaTs = null;
+
+    function pushTfaTrail(tfa, tsKey) {
       if (!tfa) return;
-      // Only push when value actually changes (deduplicate by rounded value)
-      const rounded = Math.round(tfa.value * 10) / 10;
-      if (tfaTrail.length > 0) {
-        const lastRounded = Math.round(tfaTrail[0].value * 10) / 10;
-        if (Math.abs(rounded - lastRounded) < 0.5) return; // same value, update in place
-        // Value changed: shift current [0] to [1], new value becomes [0]
-      }
+      // Deduplicate by timestamp: same ts = same broadcast, skip
+      if (tsKey != null && tsKey === _lastTfaTs) return;
+      _lastTfaTs = tsKey;
       tfaTrail.unshift({ mode: tfa.mode, value: tfa.value, color: tfa.color });
       if (tfaTrail.length > COMPASS_POINT_COUNT) {
         tfaTrail.splice(COMPASS_POINT_COUNT);
@@ -753,15 +764,22 @@
         inclVal.textContent = fmt(incl, 1);
         inclTime.textContent = nowHms();
       }
+      // AZIM box: prefer real azim, fallback to gTFA toolface
+      const gtfaForAzim = d.gTFA != null ? Number(d.gTFA) : null;
       if (azim != null) {
         azimVal.textContent = fmt(azim, 1);
         azimTime.textContent = nowHms();
+        if (azimLabel) azimLabel.textContent = 'AZIM';
+      } else if (gtfaForAzim != null && Number.isFinite(gtfaForAzim)) {
+        azimVal.textContent = fmt(((gtfaForAzim % 360) + 360) % 360, 1);
+        azimTime.textContent = nowHms();
+        if (azimLabel) azimLabel.textContent = 'T.AZM';
       }
 
       const incomingTfa = readIncomingTfa(d);
       if (incomingTfa) {
-        // Always call pushTfaTrail — it deduplicates by value internally
-        pushTfaTrail(incomingTfa);
+        const tfaTsKey = d.gamma_ts != null ? `gts:${d.gamma_ts}` : (d.ts != null ? `ts:${d.ts}` : null);
+        pushTfaTrail(incomingTfa, tfaTsKey);
       }
       if (tfaTrail.length) {
         centerMode.textContent = tfaTrail[0].mode;
@@ -808,9 +826,12 @@
         if (!r || !r.ok) return;
         const rows = await r.json();
         rows.forEach(row => {
-          if (row.hole_depth != null && row.gamma != null) {
-            const gd = gammaDepthFromHoleDepth(Number(row.hole_depth));
-            if (gd != null) addGammaPoint(gd, Number(row.gamma));
+          if (row.gamma != null) {
+            // Use gamma_depth directly if available (already computed), else calculate
+            const gd = row.gamma_depth != null
+              ? Number(row.gamma_depth)
+              : gammaDepthFromHoleDepth(row.hole_depth != null ? Number(row.hole_depth) : null);
+            if (gd != null && Number.isFinite(gd)) addGammaPoint(gd, Number(row.gamma));
           }
         });
         drawGammaChart();

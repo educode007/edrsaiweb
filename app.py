@@ -56,6 +56,8 @@ _latest = {
 }
 
 _config = {'gamma_offset': 15.0}
+_history = []          # in-memory history: list of web_payload dicts, newest last
+HISTORY_MAX = 2000     # keep last 2000 records in RAM
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 def _fallback_compass_points(latest: dict):
@@ -115,16 +117,10 @@ def api_web_state():
 
 @app.route('/api/web/history')
 def api_web_history():
-    """Last N samples for bootstrap chart."""
-    limit = int(request.args.get('limit', 200))
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    rows = con.execute(
-        'SELECT ts, hole_depth, gamma, gamma_depth, incl, azim FROM log ORDER BY ts DESC LIMIT ?',
-        (limit,)
-    ).fetchall()
-    con.close()
-    rows = list(reversed([dict(r) for r in rows]))
+    """Last N samples — served from in-memory history (survives page refresh)."""
+    limit = int(request.args.get('limit', 1200))
+    with _lock:
+        rows = list(_history[-limit:])
     return jsonify(rows)
 
 @app.route('/api/ingest', methods=['POST'])
@@ -145,23 +141,32 @@ def api_ingest():
             _latest['compass_points'] = data['compass_points']
         
         _latest['ts'] = time.time()
-        
-        # Store in database for history
+
+        # Store snapshot in memory history
+        snap = _web_payload_snapshot(_latest)
+        _history.append(snap)
+        if len(_history) > HISTORY_MAX:
+            del _history[:-HISTORY_MAX]
+
+        # Also persist to DB when gamma is available
         if _latest.get('gamma') is not None:
-            con = sqlite3.connect(DB_PATH)
-            con.execute('''
-                INSERT INTO log (ts, hole_depth, gamma, gamma_depth, incl, azim)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                _latest['ts'],
-                _latest.get('hole_depth'),
-                _latest.get('gamma'),
-                _latest.get('gamma_depth'),
-                _latest.get('incl'),
-                _latest.get('azim')
-            ))
-            con.commit()
-            con.close()
+            try:
+                con = sqlite3.connect(DB_PATH)
+                con.execute('''
+                    INSERT INTO log (ts, hole_depth, gamma, gamma_depth, incl, azim)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    _latest['ts'],
+                    _latest.get('hole_depth'),
+                    _latest.get('gamma'),
+                    _latest.get('gamma_depth'),
+                    _latest.get('incl'),
+                    _latest.get('azim')
+                ))
+                con.commit()
+                con.close()
+            except Exception:
+                pass
     
     return jsonify({'ok': True})
 
