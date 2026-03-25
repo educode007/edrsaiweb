@@ -441,22 +441,15 @@
     }
 
     function clampGammaView(minV, maxV, bounds) {
+      // Allow panning 200m beyond actual data range so user is never trapped
+      const margin = 200;
+      const hardMin = bounds.min - margin;
+      const hardMax = bounds.max + margin;
       let min = minV;
       let max = maxV;
-      const total = bounds.max - bounds.min;
       const span = Math.max(1, max - min);
-
-      if (span >= total) {
-        return { min: bounds.min, max: bounds.max };
-      }
-      if (min < bounds.min) {
-        max += bounds.min - min;
-        min = bounds.min;
-      }
-      if (max > bounds.max) {
-        min -= max - bounds.max;
-        max = bounds.max;
-      }
+      if (min < hardMin) { max += hardMin - min; min = hardMin; }
+      if (max > hardMax) { min -= max - hardMax; max = hardMax; }
       return { min, max };
     }
 
@@ -857,19 +850,13 @@
         return;
       }
 
-      const rect = gammaCanvas.getBoundingClientRect();
-      const yPx = ev.clientY - rect.top;
-      const ratio = Math.max(0, Math.min(1, (yPx - gammaViewport.pad.top) / gammaViewport.ph));
-      const anchor = gammaViewport.d0 + ratio * span;
-      // Fixed 8% per throttled step — symmetric in both directions
+      // Zoom anchored to CENTER of viewport (not cursor) — prevents chart jumping down
+      const center = (gammaViewport.d0 + gammaViewport.d1) / 2;
       const zoomFactor = ev.deltaY > 0 ? 1.08 : (1 / 1.08);
       let newSpan = span * zoomFactor;
-
-      const maxSpan = Math.max(1, bounds.max - bounds.min);
-      newSpan = Math.max(1.5, Math.min(maxSpan, newSpan));
-
-      let newMin = anchor - ((anchor - gammaViewport.d0) * (newSpan / span));
-      let newMax = newMin + newSpan;
+      newSpan = Math.max(1.5, Math.min(10000, newSpan));
+      let newMin = center - newSpan / 2;
+      let newMax = center + newSpan / 2;
       const clamped = clampGammaView(newMin, newMax, bounds);
 
       gammaView.enabled = true;
@@ -930,6 +917,22 @@
       gammaView.enabled = false;
       gammaView.min = null;
       gammaView.max = null;
+      drawGammaChart();
+    });
+
+    // Arrow keys: pan up/down 15% of current span
+    window.addEventListener('keydown', (ev) => {
+      if (!gammaViewport) return;
+      if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+      ev.preventDefault();
+      const span   = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
+      const step   = span * 0.15;
+      const delta  = ev.key === 'ArrowDown' ? step : -step;
+      const bounds = gammaDataBounds();
+      const moved  = clampGammaView(gammaViewport.d0 + delta, gammaViewport.d1 + delta, bounds);
+      gammaView.enabled = true;
+      gammaView.min = moved.min;
+      gammaView.max = moved.max;
       drawGammaChart();
     });
 
