@@ -5,54 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EDR SAI — Web Compass</title>
   <style>
-    :root {
-      --bg: #ececec;
-      --panel: #ffffff;
-      --line: #c3c3c3;
-      --ink: #111;
-      --muted: #666;
-      --blue: #0b47f0;
-      --red: #e11a1a;
-      --purple: #8b16ff;
-      --header: #10162a;
-      --headerText: #d4defb;
-      --ok: #00bf63;
-    }
-
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); font-family: 'Segoe UI', Arial, sans-serif; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #0e1117; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }
 
     .hdr {
-      height: 42px;
-      background: var(--header);
-      color: var(--headerText);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 10px;
-      border-bottom: 2px solid #060a15;
+      height: 42px; background: #10162a; color: #d4defb;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px; border-bottom: 2px solid #060a15;
     }
     .hdr-left { display: flex; align-items: center; gap: 14px; }
     .logo { font-weight: 900; letter-spacing: .1em; color: #7ec8ff; }
-    .nav-link {
-      color: #99aacc;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 700;
-      padding: 4px 8px;
-      border-radius: 4px;
-    }
+    .nav-link { color: #99aacc; text-decoration: none; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 4px; }
     .nav-link:hover { background: #1f2740; color: #dde7ff; }
     .nav-link.active { background: #1a2d60; color: #9ed2ff; }
 
-    .status { display: flex; align-items: center; gap: 7px; font-size: 12px; }
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #4d4d4d;
-    }
-    .dot.live { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #8898bb; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #3a3a3a; }
+    .dot.live { background: #00bf63; box-shadow: 0 0 6px #00bf63; }
 
     .page {
       height: calc(100% - 42px);
@@ -60,11 +29,12 @@
       grid-template-columns: minmax(180px, 22%) 1fr;
       gap: 8px;
       padding: 8px;
+      background: #0e1117;
     }
 
     .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
+      background: #181d28;
+      border: 1px solid #2e3340;
       border-radius: 6px;
       overflow: hidden;
       min-height: 0;
@@ -72,36 +42,39 @@
 
     .card-hdr {
       padding: 8px 10px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
-      letter-spacing: .05em;
-      color: #273250;
-      border-bottom: 1px solid #d6dbe7;
+      letter-spacing: .06em;
+      color: #7ec8f7;
+      border-bottom: 1px solid #2e3340;
       text-transform: uppercase;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #131720;
     }
 
     .chart-wrap {
       position: relative;
       height: calc(100% - 36px);
       min-height: 300px;
-      background: #fafafa;
+      background: #111520;
     }
     .chart-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
     .gamma-tools { display: flex; align-items: center; gap: 6px; }
     .gamma-btn {
-      border: 1px solid #aeb7cc;
-      background: #f2f5ff;
-      color: #2b3968;
+      border: 1px solid #3a4870;
+      background: #1e2535;
+      color: #7ec8f7;
       font-size: 11px;
       font-weight: 800;
       border-radius: 4px;
-      padding: 1px 7px;
+      padding: 2px 8px;
       cursor: pointer;
     }
-    .gamma-hint { font-size: 10px; color: #5f6780; font-weight: 700; }
+    .gamma-btn:hover { background: #2a3550; }
+    .gamma-hint { font-size: 10px; color: #4a5878; font-weight: 700; }
 
     .compass-layout {
       height: calc(100% - 36px);
@@ -115,43 +88,32 @@
     .compass-wrap {
       position: relative;
       min-height: 320px;
-      background: #f7f7f7;
-      border: 1px solid #d6d6d6;
+      background: #10131a;
+      border: 1px solid #2e3340;
       border-radius: 6px;
       overflow: hidden;
     }
     .compass-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 
     .center-readout {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      color: #101010;
-      text-align: center;
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; text-align: center;
     }
-    .center-title { font-size: 34px; font-weight: 900; line-height: 1; }
-    .center-sub { font-size: 16px; font-weight: 700; color: #2f2f2f; }
+    .center-title { font-size: 34px; font-weight: 900; line-height: 1; color: #e0eeff; }
+    .center-sub { font-size: 16px; font-weight: 700; color: #7ec8f7; }
 
-    .box-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    .box-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .box-row.single { grid-template-columns: 1fr; }
     .box {
-      border: 1px solid #bcbcbc;
-      background: #fdfdfd;
+      border: 1px solid #2e3340;
+      background: #131720;
       border-radius: 4px;
       padding: 5px 7px;
     }
-    .box-label { font-size: 11px; font-weight: 800; color: #344; text-transform: uppercase; }
-    .box-val { font-size: 30px; font-weight: 900; line-height: 1; margin-top: 1px; font-variant-numeric: tabular-nums; }
-    .box-time { margin-top: 2px; font-size: 10px; color: var(--muted); font-weight: 700; }
+    .box-label { font-size: 11px; font-weight: 800; color: #5a7090; text-transform: uppercase; letter-spacing: .05em; }
+    .box-val { font-size: 30px; font-weight: 900; line-height: 1; margin-top: 2px; font-variant-numeric: tabular-nums; color: #d8ecff; }
+    .box-time { margin-top: 2px; font-size: 10px; color: #3a5070; font-weight: 700; }
 
     @media (max-width: 980px) {
       .page { grid-template-columns: 1fr; grid-template-rows: 340px 1fr; }
@@ -166,46 +128,22 @@
       .nav-link { font-size: 11px; padding: 3px 6px; }
       .status { font-size: 11px; gap: 5px; }
       #clock { display: none; }
-
       .page {
-        height: auto;
-        min-height: calc(100vh - 48px);
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto;
-        gap: 6px;
-        padding: 6px;
+        height: auto; min-height: calc(100vh - 48px);
+        grid-template-columns: 1fr; grid-template-rows: auto auto;
+        gap: 6px; padding: 6px;
       }
-
-      /* Gamma chart: altura fija cómoda en móvil */
-      .page > section:first-child {
-        height: 280px;
-      }
+      .page > section:first-child { height: 280px; }
       .chart-wrap { min-height: 0; height: calc(100% - 36px); }
-
-      /* Ocultar hints de teclado en touch */
       .gamma-hint { display: none; }
       .gamma-btn { padding: 3px 10px; font-size: 12px; }
-
-      /* Compass más cuadrado en móvil */
-      .compass-layout {
-        height: auto;
-        padding: 6px;
-        gap: 6px;
-      }
-      .compass-wrap {
-        min-height: 0;
-        height: 56vw;
-        max-height: 320px;
-      }
-
-      /* Valores numéricos más grandes para lectura fácil */
+      .compass-layout { height: auto; padding: 6px; gap: 6px; }
+      .compass-wrap { min-height: 0; height: 56vw; max-height: 320px; }
       .box-val { font-size: 34px; }
       .box-label { font-size: 12px; }
       .box-time { font-size: 11px; }
       .center-title { font-size: 32px; }
       .center-sub { font-size: 14px; }
-
-      /* Box row con más padding para touch */
       .box { padding: 8px 10px; }
     }
   </style>
@@ -526,7 +464,7 @@
       const { ctx, w, h } = fitCanvas(gammaCanvas);
       ctx.clearRect(0, 0, w, h);
 
-      ctx.fillStyle = '#f9f9f9';
+      ctx.fillStyle = '#111520';
       ctx.fillRect(0, 0, w, h);
 
       const pad = { top: 30, right: 16, bottom: 38, left: 58 };
@@ -535,10 +473,10 @@
       if (pw <= 0 || ph <= 0) return;
 
       if (gammaSeries.length < 2) {
-        ctx.strokeStyle = '#3a3a3a';
+        ctx.strokeStyle = '#2e3340';
         ctx.lineWidth = 1.2;
         ctx.strokeRect(pad.left, pad.top, pw, ph);
-        ctx.fillStyle = '#777';
+        ctx.fillStyle = '#4a6080';
         ctx.font = '12px Segoe UI';
         ctx.fillText('Esperando puntos gamma/depth...', pad.left + 10, pad.top + 22);
         return;
@@ -583,13 +521,13 @@
       gammaViewport = { pad, pw, ph, d0, d1 };
 
       // Track border
-      ctx.strokeStyle = '#262626';
+      ctx.strokeStyle = '#2e3340';
       ctx.lineWidth = 1.4;
       ctx.strokeRect(pad.left, pad.top, pw, ph);
 
       // Vertical gamma grid
       ctx.setLineDash([2, 5]);
-      ctx.strokeStyle = '#9a9a9a';
+      ctx.strokeStyle = '#1e2840';
       ctx.lineWidth = 1;
       for (let i = 1; i < 4; i++) {
         const gx = pad.left + (pw * i / 4);
@@ -611,30 +549,28 @@
       ctx.setLineDash([]);
 
       // Track labels
-      ctx.fillStyle = '#202020';
+      ctx.fillStyle = '#7ec8f7';
       ctx.font = 'bold 12px Segoe UI';
       ctx.textAlign = 'center';
       ctx.fillText('Gamma Ray (API)', pad.left + pw / 2, 16);
 
       ctx.font = 'bold 11px Segoe UI';
+      ctx.fillStyle = '#5a7090';
       ctx.textAlign = 'left';
       ctx.fillText('0', pad.left, pad.top - 8);
       ctx.textAlign = 'right';
       ctx.fillText('255', pad.left + pw, pad.top - 8);
 
-      ctx.textAlign = 'left';
-      ctx.font = '11px Segoe UI';
-      ctx.fillText('', pad.left, h - 16);
-
       ctx.save();
       ctx.translate(18, pad.top + ph / 2);
       ctx.rotate(-Math.PI / 2);
       ctx.textAlign = 'center';
+      ctx.fillStyle = '#5a7090';
       ctx.font = 'bold 12px Segoe UI';
       ctx.fillText('Gamma Depth (m)', 0, 0);
       ctx.restore();
 
-      ctx.fillStyle = '#1f1f1f';
+      ctx.fillStyle = '#5a7090';
       ctx.font = '10px Segoe UI';
       ctx.textAlign = 'right';
       for (let d = firstTick; d <= d1 + depthTick * 0.5; d += depthTick) {
@@ -645,8 +581,20 @@
       const gammaTrack = buildGammaTrackPoints(d0, d1);
       if (gammaTrack.length < 2) return;
 
+      // Fill under curve
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y(gammaTrack[0].depth));
+      for (const p of gammaTrack) {
+        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
+        ctx.lineTo(x(p.gamma), y(p.depth));
+      }
+      ctx.lineTo(pad.left, y(gammaTrack[gammaTrack.length - 1].depth));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(60,180,60,0.25)';
+      ctx.fill();
+
       // Curve
-      ctx.strokeStyle = '#111';
+      ctx.strokeStyle = '#70e878';
       ctx.lineWidth = 1.7;
       ctx.beginPath();
       let started = false;
@@ -673,36 +621,40 @@
       const labelMargin = 34;
       const R = Math.max(40, (Math.min(w, h) / 2) - labelMargin);
 
-      ctx.fillStyle = '#f3f3f3';
+      ctx.fillStyle = '#10131a';
       ctx.fillRect(0, 0, w, h);
 
-      ctx.strokeStyle = '#888';
+      // Rings
       ctx.lineWidth = 1;
       for (let i = 1; i <= COMPASS_SPACE_COUNT; i++) {
+        ctx.strokeStyle = i === COMPASS_SPACE_COUNT ? '#3a4870' : '#1e2840';
         ctx.beginPath();
         ctx.arc(cx, cy, (R * i) / COMPASS_SPACE_COUNT, 0, Math.PI * 2);
         ctx.stroke();
       }
 
+      // Tick marks
       for (let deg = 0; deg < 360; deg += 10) {
         const a = (deg - 90) * Math.PI / 180;
         const r1 = R;
         const r2 = R - (deg % 30 === 0 ? 10 : 5);
-        ctx.strokeStyle = '#555';
+        ctx.strokeStyle = deg % 90 === 0 ? '#4a6090' : '#2a3550';
+        ctx.lineWidth = deg % 90 === 0 ? 1.5 : 1;
         ctx.beginPath();
         ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
         ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
         ctx.stroke();
       }
 
+      // Cardinal labels
       const dir = [
         { d: 0, t: '0' },
         { d: 90, t: '90' },
         { d: 180, t: '180' },
         { d: 270, t: '270' }
       ];
-      ctx.fillStyle = '#1d1d1d';
-      ctx.font = 'bold 18px Segoe UI';
+      ctx.fillStyle = '#6080a8';
+      ctx.font = 'bold 16px Segoe UI';
       dir.forEach(({ d, t }) => {
         const a = (d - 90) * Math.PI / 180;
         const rr = R + 16;
@@ -716,15 +668,20 @@
       // Current azim pointer
       if (Number.isFinite(azimNow)) {
         const a = (azimNow - 90) * Math.PI / 180;
-        ctx.strokeStyle = '#111';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#7ec8f7';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + Math.cos(a) * (R * 0.95), cy + Math.sin(a) * (R * 0.95));
         ctx.stroke();
+        // Arrow tip
+        ctx.fillStyle = '#7ec8f7';
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(a) * (R * 0.95), cy + Math.sin(a) * (R * 0.95), 4, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      // Payload points: r=1 outer ring, r=0 center
+      // Payload points
       let n = 0;
       for (const p of (Array.isArray(points) ? points : [])) {
         const az = Number(p.az);
@@ -737,13 +694,16 @@
         const px = cx + Math.cos(a) * pr;
         const py = cy + Math.sin(a) * pr;
 
-        ctx.fillStyle = p.color || (n % 2 === 0 ? '#0b47f0' : '#e11a1a');
+        ctx.fillStyle = p.color || (n % 2 === 0 ? '#4080ff' : '#ff5050');
         ctx.beginPath();
         ctx.arc(px, py, 8, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
         if (p.label) {
-          ctx.fillStyle = '#101010';
+          ctx.fillStyle = '#a0c0e0';
           ctx.font = 'bold 11px Segoe UI';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
