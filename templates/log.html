@@ -196,7 +196,7 @@ let _rt    = [];   // [{depth, gamma}]          — from real-time EDRsai
 let _rtNow = { hole_depth: null, gamma: null }; // latest RT point
 let _userPanned = false; // true after user manually pans/zooms — prevents auto-reset
 
-let GAS_MAX = 40000;
+let GAS_MAX = 50000;
 const RASTROS_MAX = 4;
 const RASTROS_COLORS = ['#1e2129','#3a5a20','#70c030','#f0a010','#ffffff'];
 
@@ -364,20 +364,24 @@ function drawRastros() {
   ctx.fillStyle = '#100f18'; ctx.fillRect(0, 0, W, H);
   drawDepthGrid(ctx, W, H, from, to);
 
-  // Reference lines 1-4 with level color
+  // Reserve top padding so 'Abu.' label is never clipped
+  const rPadTop = 14;
+  const rUsableH = H - rPadTop - 4;
   const _rColors = ['#3a5a20','#70c030','#f0a010','#ffffff'];
+  // Reference lines for levels 1-4
   for (let v = 1; v <= RASTROS_MAX; v++) {
-    const y = H - (v / RASTROS_MAX) * (H - 4) - 2;
-    ctx.strokeStyle = _rColors[v-1].replace(')', ',0.25)').replace('rgb','rgba') || 'rgba(255,255,255,0.15)';
-    ctx.strokeStyle = _rColors[v-1] + '40';  // hex alpha 25%
+    const y = rPadTop + rUsableH - (v / RASTROS_MAX) * rUsableH;
+    ctx.strokeStyle = _rColors[v-1] + '50';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
   ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+  // Labels: S/R at bottom, Abu. at top — always inside canvas
   ['S/R','Ais.','Esc.','Reg.','Abu.'].forEach((lbl, i) => {
-    const y = H - (i / RASTROS_MAX) * (H - 4) - 2;
+    const y = rPadTop + rUsableH - (i / RASTROS_MAX) * rUsableH;
     ctx.fillStyle = i === 0 ? 'rgba(255,255,255,0.4)' : _rColors[i-1];
-    ctx.fillText(lbl, 2, y - 1);
+    // draw label below the line so it stays visible
+    ctx.fillText(lbl, 2, y + 9);
   });
 
   const range = to - from;
@@ -389,10 +393,10 @@ function drawRastros() {
     if (val <= 0) return;
     const x     = dToX(p.depth, W, from, to);
     const ratio = Math.min(val, RASTROS_MAX) / RASTROS_MAX;
-    const barH  = Math.max(2, ratio * (H - 6));
+    const barH  = Math.max(2, ratio * rUsableH);
     const ci    = Math.min(Math.round(val), RASTROS_COLORS.length - 1);
     ctx.fillStyle = RASTROS_COLORS[ci]; ctx.globalAlpha = 0.9;
-    ctx.fillRect(x - barW / 2, H - barH - 3, barW, barH);
+    ctx.fillRect(x - barW / 2, rPadTop + rUsableH - barH, barW, barH);
     ctx.globalAlpha = 1;
   });
 }
