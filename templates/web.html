@@ -581,6 +581,12 @@
       const gammaTrack = buildGammaTrackPoints(d0, d1);
       if (gammaTrack.length < 2) return;
 
+      // Clip to plot area so curve never escapes the box
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(pad.left, pad.top, pw, ph);
+      ctx.clip();
+
       // Fill under curve
       ctx.beginPath();
       ctx.moveTo(pad.left, y(gammaTrack[0].depth));
@@ -590,11 +596,11 @@
       }
       ctx.lineTo(pad.left, y(gammaTrack[gammaTrack.length - 1].depth));
       ctx.closePath();
-      ctx.fillStyle = 'rgba(60,180,60,0.25)';
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fill();
 
-      // Curve
-      ctx.strokeStyle = '#70e878';
+      // Curve — white
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.7;
       ctx.beginPath();
       let started = false;
@@ -610,6 +616,8 @@
         }
       }
       ctx.stroke();
+
+      ctx.restore();
     }
 
     function drawCompass(points, azimNow) {
