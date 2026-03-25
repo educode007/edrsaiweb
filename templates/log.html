@@ -196,9 +196,9 @@ let _rt    = [];   // [{depth, gamma}]          — from real-time EDRsai
 let _rtNow = { hole_depth: null, gamma: null }; // latest RT point
 let _userPanned = false; // true after user manually pans/zooms — prevents auto-reset
 
-let GAS_MAX = 50000;
+let GAS_MAX = 60000;
 const RASTROS_MAX = 4;
-const RASTROS_COLORS = ['#1e2129','#3a5a20','#70c030','#f0a010','#ffffff'];
+const RASTROS_COLORS = ['#1e2129','#5a3a00','#c87800','#f0b820','#ffe060'];
 
 // ── Canvas refs ───────────────────────────────────────────────────────────────
 const cvs = {
@@ -367,7 +367,7 @@ function drawRastros() {
   // Reserve top padding so 'Abu.' label is never clipped
   const rPadTop = 14;
   const rUsableH = H - rPadTop - 4;
-  const _rColors = ['#3a5a20','#70c030','#f0a010','#ffffff'];
+  const _rColors = ['#c87800','#f0b820','#ffe060','#ffffff'];
   // Reference lines for levels 1-4
   for (let v = 1; v <= RASTROS_MAX; v++) {
     const y = rPadTop + rUsableH - (v / RASTROS_MAX) * rUsableH;
