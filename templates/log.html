@@ -531,10 +531,12 @@ chartsDiv.addEventListener('wheel', e => {
   const rect   = chartsDiv.getBoundingClientRect();
   const xRatio = (e.clientX - rect.left) / chartsDiv.clientWidth;
   const { from, to } = getWindow();
-  const range   = to - from;
-  const factor  = e.deltaY > 0 ? 1.15 : (1 / 1.15);
-  const newRange = range * factor;
-  const pivot   = from + xRatio * range;
+  const range  = to - from;
+  // Normalize delta: cap at 1 tick regardless of wheel speed/device
+  const ticks  = Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY) / 100);
+  const factor = Math.pow(1.08, ticks);   // 8% per tick, symmetric in/out
+  const newRange = Math.max(5, range * factor);
+  const pivot  = from + xRatio * range;
   setWindow(pivot - xRatio * newRange, pivot + (1 - xRatio) * newRange);
   drawAll();
 }, { passive: false });
