@@ -629,15 +629,17 @@ async function loadPersistedLas() {
       _las.sort((a, b) => a.depth - b.depth);
       const mx = Math.max(..._las.filter(p => p.gas != null).map(p => p.gas), 0);
       if (mx > 0) GAS_MAX = Math.ceil(mx / 500) * 500;
+      // Fit window to data range and redraw
+      fitAll();
       document.getElementById('statusBar').textContent =
         `LAS restaurado: ${_las.length} pts`;
     }
   } catch(e) { /* silent */ }
 }
 
-window.addEventListener('load', () => {
-  resizeAll();
-  loadPersistedLas();
+window.addEventListener('load', async () => {
+  resizeAll();                  // size canvases first
+  await loadPersistedLas();     // then fetch + draw
 });
 </script>
 </body>

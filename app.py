@@ -56,8 +56,50 @@ def _db_init():
             azim REAL
         )
     ''')
+    con.execute('''
+        CREATE TABLE IF NOT EXISTS las_data (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            depth    REAL NOT NULL,
+            gas      REAL,
+            rastros  REAL,
+            oil_show INTEGER DEFAULT 0,
+            gas_show INTEGER DEFAULT 0
+        )
+    ''')
     con.commit()
     con.close()
+
+
+def _las_db_save(rows):
+    """Replace all las_data rows with new data."""
+    try:
+        con = sqlite3.connect(DB_PATH)
+        con.execute('PRAGMA journal_mode=WAL')
+        con.execute('DELETE FROM las_data')
+        con.executemany(
+            'INSERT INTO las_data (depth,gas,rastros,oil_show,gas_show) VALUES (?,?,?,?,?)',
+            [(r['depth'], r.get('gas'), r.get('rastros'), r.get('oil_show', 0), r.get('gas_show', 0))
+             for r in rows]
+        )
+        con.commit()
+        con.close()
+    except Exception:
+        pass
+
+
+def _las_db_load():
+    """Load las_data rows from SQLite."""
+    try:
+        con = sqlite3.connect(DB_PATH)
+        cur = con.execute('SELECT depth,gas,rastros,oil_show,gas_show FROM las_data ORDER BY depth')
+        rows = [
+            {'depth': r[0], 'gas': r[1], 'rastros': r[2], 'oil_show': r[3], 'gas_show': r[4]}
+            for r in cur.fetchall()
+        ]
+        con.close()
+        return rows
+    except Exception:
+        return []
 
 # ── Global state ──────────────────────────────────────────────────────────────
 _lock = threading.Lock()
@@ -366,26 +408,35 @@ def api_log_import():
     if not mapped:
         return jsonify({'ok': False, 'error': 'Sin filas válidas'}), 400
     mapped.sort(key=lambda x: x['depth'])
-    # Persist server-side so data survives page refresh / tab switch
+    mapped = mapped[:LAS_MAX]
+    # Persist to SQLite (survives process restart) AND RAM cache
+    _las_db_save(mapped)
     with _lock:
         global _las_data
-        _las_data = mapped[:LAS_MAX]
+        _las_data = mapped
     return jsonify({'ok': True, 'rows': mapped, 'inserted': len(mapped)})
 
 
 @app.route('/api/log/data', methods=['GET'])
 @login_required
 def api_log_data_get():
-    """Return currently stored LAS data."""
+    """Return stored LAS data — RAM cache first, fallback to SQLite."""
     with _lock:
         rows = list(_las_data)
+    if not rows:
+        # RAM cache empty (process restarted) — load from SQLite
+        rows = _las_db_load()
+        with _lock:
+            global _las_data
+            _las_data = rows
     return jsonify({'ok': True, 'rows': rows, 'count': len(rows)})
 
 
 @app.route('/api/log/data', methods=['DELETE'])
 @login_required
 def api_log_data_delete():
-    """Clear stored LAS data."""
+    """Clear stored LAS data from RAM and SQLite."""
+    _las_db_save([])   # wipe SQLite
     with _lock:
         global _las_data
         _las_data = []
