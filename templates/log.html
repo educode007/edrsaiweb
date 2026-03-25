@@ -468,25 +468,39 @@ socket.on('disconnect', () => {
   badge.className   = '';
 });
 
+let _needsDraw = false;
+
 socket.on('web_update', d => {
   badge.textContent = '● En vivo';
   badge.className   = 'live';
   // Update "now" cursor
   _rtNow.hole_depth = d.hole_depth ?? _rtNow.hole_depth;
   _rtNow.gamma      = d.gamma      ?? _rtNow.gamma;
-  // Accumulate RT gamma track
+  // Accumulate RT gamma track (data only, no draw here)
   const depth = d.gamma_depth ?? d.hole_depth;
   if (depth != null && d.gamma != null) {
-    // Deduplicate by depth
     const last = _rt[_rt.length - 1];
     if (!last || Math.abs(last.depth - depth) > 0.05) {
       _rt.push({ depth, gamma: d.gamma });
       if (_rt.length > 5000) _rt.shift();
     } else {
-      last.gamma = d.gamma; // update in place
+      last.gamma = d.gamma;
     }
   }
-  drawAll();
+  _needsDraw = true;
+});
+
+// Independent draw loop: redraws at most once per second regardless of tab state
+setInterval(() => {
+  if (_needsDraw) {
+    drawAll();
+    _needsDraw = false;
+  }
+}, 1000);
+
+// Redraw immediately when tab becomes visible again (catches up on missed draws)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) drawAll();
 });
 
 // ── Cursor line ───────────────────────────────────────────────────────────────
