@@ -196,9 +196,9 @@ let _rt    = [];   // [{depth, gamma}]          — from real-time EDRsai
 let _rtNow = { hole_depth: null, gamma: null }; // latest RT point
 let _userPanned = false; // true after user manually pans/zooms — prevents auto-reset
 
-let GAS_MAX = 35000;
+let GAS_MAX = 40000;
 const RASTROS_MAX = 4;
-const RASTROS_COLORS = ['#1e2129','#5a2a04','#c8820a','#e8a020','#ffe040'];
+const RASTROS_COLORS = ['#1e2129','#3a5a20','#70c030','#f0a010','#ffffff'];
 
 // ── Canvas refs ───────────────────────────────────────────────────────────────
 const cvs = {
@@ -364,15 +364,19 @@ function drawRastros() {
   ctx.fillStyle = '#100f18'; ctx.fillRect(0, 0, W, H);
   drawDepthGrid(ctx, W, H, from, to);
 
-  // Reference lines 1-4
+  // Reference lines 1-4 with level color
+  const _rColors = ['#3a5a20','#70c030','#f0a010','#ffffff'];
   for (let v = 1; v <= RASTROS_MAX; v++) {
     const y = H - (v / RASTROS_MAX) * (H - 4) - 2;
-    ctx.strokeStyle = 'rgba(255,180,40,0.07)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = _rColors[v-1].replace(')', ',0.25)').replace('rgb','rgba') || 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = _rColors[v-1] + '40';  // hex alpha 25%
+    ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+  ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
   ['S/R','Ais.','Esc.','Reg.','Abu.'].forEach((lbl, i) => {
     const y = H - (i / RASTROS_MAX) * (H - 4) - 2;
+    ctx.fillStyle = i === 0 ? 'rgba(255,255,255,0.4)' : _rColors[i-1];
     ctx.fillText(lbl, 2, y - 1);
   });
 

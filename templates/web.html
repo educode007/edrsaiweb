@@ -834,15 +834,21 @@
       drawCompass(lastCompassPoints, Number(azimVal.textContent));
     });
 
+    let _wheelLastT = 0;
     gammaCanvas.addEventListener('wheel', (ev) => {
       if (!gammaViewport) return;
       ev.preventDefault();
+
+      // Throttle: one zoom step per 80 ms regardless of device wheel speed
+      const now = Date.now();
+      if (now - _wheelLastT < 80) return;
+      _wheelLastT = now;
 
       const bounds = gammaDataBounds();
       const span = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
 
       if (ev.shiftKey) {
-        const deltaDepth = (ev.deltaY / 100) * Math.max(0.5, span * 0.06);
+        const deltaDepth = Math.sign(ev.deltaY) * Math.max(0.5, span * 0.06);
         const moved = clampGammaView(gammaViewport.d0 + deltaDepth, gammaViewport.d1 + deltaDepth, bounds);
         gammaView.enabled = true;
         gammaView.min = moved.min;
@@ -855,8 +861,8 @@
       const yPx = ev.clientY - rect.top;
       const ratio = Math.max(0, Math.min(1, (yPx - gammaViewport.pad.top) / gammaViewport.ph));
       const anchor = gammaViewport.d0 + ratio * span;
-      const ticks = Math.sign(ev.deltaY) * Math.min(1, Math.abs(ev.deltaY) / 100);
-      const zoomFactor = Math.pow(1.08, ticks);   // 8% per tick, symmetric
+      // Fixed 8% per throttled step — symmetric in both directions
+      const zoomFactor = ev.deltaY > 0 ? 1.08 : (1 / 1.08);
       let newSpan = span * zoomFactor;
 
       const maxSpan = Math.max(1, bounds.max - bounds.min);
