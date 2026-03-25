@@ -419,6 +419,7 @@ def api_log_import():
             'gas_show': _to_show(r.get(col_gas_show)) if col_gas_show else 0,
             'rastros':  _to_float_safe(r.get(col_oil_show)) if col_oil_show else None,
         })
+    global _las_data
     if not mapped:
         return jsonify({'ok': False, 'error': 'Sin filas válidas'}), 400
     mapped.sort(key=lambda x: x['depth'])
@@ -426,7 +427,6 @@ def api_log_import():
     # Persist to SQLite (survives process restart) AND RAM cache
     _las_db_save(mapped)
     with _lock:
-        global _las_data
         _las_data = mapped
     return jsonify({'ok': True, 'rows': mapped, 'inserted': len(mapped)})
 
@@ -435,13 +435,13 @@ def api_log_import():
 @login_required
 def api_log_data_get():
     """Return stored LAS data — RAM cache first, fallback to SQLite."""
+    global _las_data
     with _lock:
         rows = list(_las_data)
     if not rows:
         # RAM cache empty (process restarted) — load from SQLite
         rows = _las_db_load()
         with _lock:
-            global _las_data
             _las_data = rows
     return jsonify({'ok': True, 'rows': rows, 'count': len(rows)})
 
@@ -450,9 +450,9 @@ def api_log_data_get():
 @login_required
 def api_log_data_delete():
     """Clear stored LAS data from RAM and SQLite."""
+    global _las_data
     _las_db_save([])   # wipe SQLite
     with _lock:
-        global _las_data
         _las_data = []
     return jsonify({'ok': True})
 
