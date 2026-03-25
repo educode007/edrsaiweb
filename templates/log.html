@@ -430,9 +430,18 @@ function clearAll() {
   drawAll();
 }
 
-// ── Cursor ────────────────────────────────────────────────────────────────────
+// ── Cursor + Zoom + Pan (todos los tracks sincronizados) ──────────────────────
 const chartsDiv = document.getElementById('charts');
 const cursor    = document.getElementById('cursorLine');
+
+// helpers
+function setWindow(from, to) {
+  if (to - from < 5) return;          // minimum 5 m window
+  document.getElementById('depthFrom').value = from.toFixed(2);
+  document.getElementById('depthTo').value   = to.toFixed(2);
+}
+
+// ── Cursor line ───────────────────────────────────────────────────────────────
 chartsDiv.addEventListener('mousemove', e => {
   const rect  = chartsDiv.getBoundingClientRect();
   const x     = e.clientX - rect.left;
@@ -441,11 +450,52 @@ chartsDiv.addEventListener('mousemove', e => {
   const { from, to } = getWindow();
   const depth = from + (x / chartsDiv.clientWidth) * (to - from);
   document.getElementById('statusBar').textContent =
-    `Cursor: ${depth.toFixed(1)} m | ${_data.length} pts`;
+    `${depth.toFixed(1)} m | ${_data.length} pts`;
 });
 chartsDiv.addEventListener('mouseleave', () => {
   cursor.style.display = 'none';
+  if (!_data.length) return;
+  const mn = _data[0].depth, mx = _data[_data.length-1].depth;
+  document.getElementById('statusBar').textContent =
+    `${_data.length} pts | ${mn.toFixed(1)} — ${mx.toFixed(1)} m`;
+});
+
+// ── Zoom con rueda del mouse ──────────────────────────────────────────────────
+// Zoom centrado en la posición del cursor
+chartsDiv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect    = chartsDiv.getBoundingClientRect();
+  const xRatio  = (e.clientX - rect.left) / chartsDiv.clientWidth;
+  const { from, to } = getWindow();
+  const range   = to - from;
+  const factor  = e.deltaY > 0 ? 1.15 : (1 / 1.15);  // scroll down = zoom out
+  const newRange = range * factor;
+  const pivot   = from + xRatio * range;               // depth under cursor
+  const newFrom = pivot - xRatio * newRange;
+  const newTo   = pivot + (1 - xRatio) * newRange;
+  setWindow(newFrom, newTo);
   drawAll();
+}, { passive: false });
+
+// ── Pan con click + drag ──────────────────────────────────────────────────────
+let _drag = null;
+chartsDiv.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  const { from, to } = getWindow();
+  _drag = { startX: e.clientX, from, to, range: to - from };
+  chartsDiv.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!_drag) return;
+  const rect    = chartsDiv.getBoundingClientRect();
+  const dxPx    = e.clientX - _drag.startX;
+  const dDepth  = -(dxPx / chartsDiv.clientWidth) * _drag.range;
+  setWindow(_drag.from + dDepth, _drag.to + dDepth);
+  drawAll();
+});
+window.addEventListener('mouseup', () => {
+  if (_drag) { _drag = null; chartsDiv.style.cursor = ''; }
 });
 
 // ── Import modal ──────────────────────────────────────────────────────────────
