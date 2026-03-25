@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EDR SAI — Log</title>
+  <style>
+    :root {
+      --bg: #ececec; --panel: #ffffff; --line: #c3c3c3; --ink: #111;
+      --muted: #666; --header: #10162a; --headerText: #d4defb; --ok: #00bf63;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }
+
+    /* ── Header ── */
+    .hdr {
+      height: 42px; background: var(--header); color: var(--headerText);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 10px;
+      border-bottom: 2px solid #060a15;
+    }
+    .hdr-left { display: flex; align-items: center; gap: 14px; }
+    .logo { font-weight: 900; letter-spacing: .1em; color: #7ec8ff; }
+    .nav-link {
+      color: #99aacc; text-decoration: none; font-size: 12px; font-weight: 700;
+      padding: 4px 8px; border-radius: 4px;
+    }
+    .nav-link:hover { background: #1f2740; color: #dde7ff; }
+    .nav-link.active { background: #1a2d60; color: #9ed2ff; }
+    .logout-link {
+      margin-left: 10px; color: #99aacc; font-size: 11px; font-weight: 700;
+      text-decoration: none; padding: 3px 8px; border: 1px solid #2a3a5a;
+      border-radius: 4px; letter-spacing: .03em;
+    }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+      background: #22262f; border-bottom: 1px solid #2e3340; flex-shrink: 0;
+    }
+    #toolbar label { color: #aab; font-size: 11px; }
+    #toolbar input[type=number] {
+      width: 70px; background: #2d3140; border: 1px solid #3a4055; color: #e0e4ef;
+      border-radius: 4px; padding: 3px 6px; font-size: 12px;
+    }
+    .btn { padding: 4px 11px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .btn-primary { background: #2979c8; color: #fff; }
+    .btn-primary:hover { background: #3a8ee0; }
+    .btn-success { background: #287a3c; color: #fff; }
+    .btn-success:hover { background: #35a050; }
+    .btn-danger  { background: #b03030; color: #fff; }
+    #statusBar { margin-left: auto; font-size: 11px; color: #7ec8f7; background: #1a1d23; padding: 3px 10px; border-radius: 4px; }
+
+    /* ── Main layout ── */
+    #wrap { display: flex; flex-direction: column; height: calc(100vh - 42px); overflow: hidden; }
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    /* Label column */
+    #labels {
+      width: 120px; flex-shrink: 0; background: #22262f; border-right: 2px solid #3a4055;
+      display: flex; flex-direction: column;
+    }
+    .track-label {
+      display: flex; flex-direction: column; justify-content: center; padding: 0 10px;
+      border-bottom: 1px solid #2e3340; font-weight: 700; color: #c8d8f0; font-size: 12px;
+    }
+    .track-label span.unit { font-size: 10px; color: #7a8aaa; font-weight: 400; margin-top: 2px; }
+
+    /* Charts */
+    #charts { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    #depthAxis { height: 28px; flex-shrink: 0; background: #1a1d23; border-bottom: 1px solid #3a4055; position: relative; overflow: hidden; }
+    #depthAxisCanvas { position: absolute; top: 0; left: 0; }
+    .track { flex: 1; position: relative; border-bottom: 1px solid #2e3340; overflow: hidden; min-height: 60px; }
+    .track canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #cursorLine { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,200,40,0.75); pointer-events: none; display: none; z-index: 10; }
+
+    /* Import modal */
+    #importOverlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    #importOverlay.open { display: flex; }
+    #importBox {
+      background: #22262f; border: 1px solid #3a4055; border-radius: 8px;
+      padding: 22px 26px; width: 500px; max-width: 95vw;
+    }
+    #importBox h2 { color: #7ec8f7; font-size: 14px; margin-bottom: 14px; font-weight: 800; }
+    .imp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+    .imp-row label { width: 140px; color: #aab; font-size: 12px; flex-shrink: 0; }
+    .imp-row select, .imp-row input[type=file] {
+      flex: 1; background: #2d3140; border: 1px solid #3a4055; color: #e0e4ef;
+      border-radius: 4px; padding: 4px 8px; font-size: 12px;
+    }
+    #importPreview {
+      background: #1a1d23; border: 1px solid #2e3340; border-radius: 4px;
+      padding: 7px; font-size: 11px; color: #7a9abb; margin: 8px 0;
+      max-height: 90px; overflow-y: auto; font-family: monospace; white-space: pre;
+    }
+    #importMsg { font-size: 12px; min-height: 18px; margin-top: 5px; }
+    .imp-actions { display: flex; gap: 10px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo">EDR SAI</div>
+    <a href="/web" class="nav-link">Web</a>
+    <a href="/log" class="nav-link active">Log</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <a href="/logout" class="logout-link" title="Cerrar sesión">Salir</a>
+  </div>
+</div>
+
+<div id="wrap">
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <label>Desde (m)</label>
+    <input type="number" id="depthFrom" value="0" step="10"/>
+    <label>Hasta (m)</label>
+    <input type="number" id="depthTo" value="500" step="10"/>
+    <button class="btn btn-primary" onclick="drawAll()">Ver</button>
+    <button class="btn btn-primary" onclick="fitAll()">Ajustar todo</button>
+    <button class="btn btn-success" onclick="openImport()">⬆ LAS / CSV</button>
+    <button class="btn btn-danger"  onclick="clearAll()">Limpiar</button>
+    <div id="statusBar">Sin datos</div>
+  </div>
+
+  <!-- Charts + labels -->
+  <div id="main">
+    <div id="labels">
+      <div style="height:28px;border-bottom:1px solid #2e3340;"></div>
+      <div class="track-label" id="lblGamma"  style="flex:1;">Gamma Ray<span class="unit">0 — 150 API</span></div>
+      <div class="track-label" id="lblRastros" style="flex:1;">Rastros<span class="unit">Petróleo / Gas</span></div>
+      <div class="track-label" id="lblGas"    style="flex:1;">Gas Total<span class="unit">0 — 500 unid.</span></div>
+    </div>
+
+    <div id="charts">
+      <div id="depthAxis"><canvas id="depthAxisCanvas"></canvas></div>
+      <div class="track" id="trackGamma">  <canvas id="canvasGamma"></canvas>  </div>
+      <div class="track" id="trackRastros"><canvas id="canvasRastros"></canvas></div>
+      <div class="track" id="trackGas">   <canvas id="canvasGas"></canvas>    </div>
+      <div id="cursorLine"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Import modal -->
+<div id="importOverlay">
+  <div id="importBox">
+    <h2>⬆ Importar LAS / CSV</h2>
+    <div class="imp-row">
+      <label>Archivo (.las / .csv)</label>
+      <input type="file" id="impFile" accept=".las,.csv,.txt" onchange="onFileSelected()"/>
+    </div>
+    <div id="importPreview">Seleccioná un archivo...</div>
+    <div class="imp-row">
+      <label>Profundidad *</label>
+      <select id="mapDepth"><option value="">— seleccionar —</option></select>
+    </div>
+    <div class="imp-row">
+      <label>Gamma Ray</label>
+      <select id="mapGamma"><option value="">— ninguna —</option></select>
+    </div>
+    <div class="imp-row">
+      <label>Gas Total</label>
+      <select id="mapGas"><option value="">— ninguna —</option></select>
+    </div>
+    <div class="imp-row">
+      <label>Petróleo (0/1)</label>
+      <select id="mapOil"><option value="">— ninguna —</option></select>
+    </div>
+    <div class="imp-row">
+      <label>Gas Show (0/1)</label>
+      <select id="mapGasShow"><option value="">— ninguna —</option></select>
+    </div>
+    <div id="importMsg"></div>
+    <div class="imp-actions">
+      <button class="btn btn-success" onclick="doImport()">Importar</button>
+      <button class="btn btn-primary" onclick="closeImport()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Data store (client-side only, no server persistence needed) ───────────────
+let _data = [];   // [{depth, gamma, gas, oil_show, gas_show}]
+
+// Track scales
+const GAMMA_MIN = 0, GAMMA_MAX = 150;
+const GAS_MIN   = 0, GAS_MAX   = 500;
+
+// Canvas refs
+const cvs = {
+  axis:    document.getElementById('depthAxisCanvas'),
+  gamma:   document.getElementById('canvasGamma'),
+  rastros: document.getElementById('canvasRastros'),
+  gas:     document.getElementById('canvasGas'),
+};
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+function resizeAll() {
+  const tracks = [
+    { wrap: 'trackGamma',   cv: 'canvasGamma',   lbl: 'lblGamma'   },
+    { wrap: 'trackRastros', cv: 'canvasRastros',  lbl: 'lblRastros' },
+    { wrap: 'trackGas',     cv: 'canvasGas',      lbl: 'lblGas'     },
+  ];
+  const axis = document.getElementById('depthAxis');
+  cvs.axis.width  = axis.clientWidth;
+  cvs.axis.height = axis.clientHeight;
+
+  tracks.forEach(t => {
+    const wrap = document.getElementById(t.wrap);
+    const c    = document.getElementById(t.cv);
+    c.width  = wrap.clientWidth;
+    c.height = wrap.clientHeight;
+    document.getElementById(t.lbl).style.height = wrap.clientHeight + 'px';
+  });
+  drawAll();
+}
+window.addEventListener('resize', resizeAll);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getWindow() {
+  return {
+    from: parseFloat(document.getElementById('depthFrom').value) || 0,
+    to:   parseFloat(document.getElementById('depthTo').value)   || 500,
+  };
+}
+
+function dToX(depth, W, from, to) {
+  return ((depth - from) / (to - from)) * W;
+}
+
+function visiblePts() {
+  const { from, to } = getWindow();
+  return _data.filter(d => d.depth >= from - 0.5 && d.depth <= to + 0.5);
+}
+
+function drawGrid(ctx, W, H, from, to) {
+  const range = to - from;
+  const mag   = Math.pow(10, Math.floor(Math.log10(range / 8)));
+  const step  = Math.ceil((range / 8) / mag) * mag;
+  const start = Math.ceil(from / step) * step;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth   = 1;
+  for (let d = start; d <= to + 0.01; d += step) {
+    const x = Math.round(dToX(d, W, from, to));
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+}
+
+// ── Draw depth axis ───────────────────────────────────────────────────────────
+function drawAxis() {
+  const c = cvs.axis, ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const { from, to } = getWindow();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#1a1d23'; ctx.fillRect(0, 0, W, H);
+
+  const range = to - from;
+  const mag   = Math.pow(10, Math.floor(Math.log10(range / 8)));
+  const step  = Math.ceil((range / 8) / mag) * mag;
+  const start = Math.ceil(from / step) * step;
+
+  ctx.fillStyle   = '#8898bb';
+  ctx.font        = '10px Segoe UI';
+  ctx.textAlign   = 'center';
+  ctx.strokeStyle = '#3a4055';
+  ctx.lineWidth   = 1;
+
+  for (let d = start; d <= to + 0.01; d += step) {
+    const x = Math.round(dToX(d, W, from, to));
+    ctx.beginPath(); ctx.moveTo(x, H - 5); ctx.lineTo(x, H); ctx.stroke();
+    ctx.fillText(d.toFixed(0) + ' m', x, H - 7);
+  }
+}
+
+// ── Draw Gamma ────────────────────────────────────────────────────────────────
+function drawGamma(pts) {
+  const c = cvs.gamma, ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const { from, to } = getWindow();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#1e2129'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx, W, H, from, to);
+
+  for (let v = 0; v <= GAMMA_MAX; v += 30) {
+    const y = H - (v / GAMMA_MAX) * H;
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(180,210,255,0.22)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+    ctx.fillText(v, 2, y - 2);
+  }
+
+  const gpts = pts.filter(p => p.gamma != null);
+  if (gpts.length < 2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(dToX(gpts[0].depth, W, from, to), H);
+  gpts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - ((p.gamma - GAMMA_MIN) / (GAMMA_MAX - GAMMA_MIN)) * H));
+  ctx.lineTo(dToX(gpts[gpts.length-1].depth, W, from, to), H);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(80,180,80,0.5)'; ctx.fill();
+
+  ctx.beginPath();
+  gpts.forEach((p, i) => {
+    const x = dToX(p.depth, W, from, to);
+    const y = H - ((p.gamma - GAMMA_MIN) / (GAMMA_MAX - GAMMA_MIN)) * H;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#70e070'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+// ── Draw Rastros ──────────────────────────────────────────────────────────────
+function drawRastros(pts) {
+  const c = cvs.rastros, ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const { from, to } = getWindow();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#1e2129'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx, W, H, from, to);
+
+  const HO = Math.round(H * 0.5);
+  const HG = H - HO - 2;
+
+  ctx.fillStyle = 'rgba(200,130,10,0.1)';  ctx.fillRect(0, 0, W, HO);
+  ctx.fillStyle = 'rgba(30,80,200,0.08)';  ctx.fillRect(0, HO+2, W, HG);
+
+  ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(200,130,10,0.4)'; ctx.fillText('PETRÓLEO', 4, 12);
+  ctx.fillStyle = 'rgba(60,150,220,0.4)'; ctx.fillText('GAS', 4, HO+14);
+
+  // Bar width based on data density
+  let barW = 4;
+  if (pts.length > 1) {
+    const range = to - from;
+    barW = Math.max(2, Math.min(12, (W / range) * 0.8));
+  }
+
+  pts.filter(p => p.oil_show).forEach(p => {
+    const x = dToX(p.depth, W, from, to);
+    ctx.fillStyle = '#c8820a'; ctx.globalAlpha = 0.85;
+    ctx.fillRect(x - barW/2, 2, barW, HO - 4);
+    ctx.globalAlpha = 1;
+  });
+  pts.filter(p => p.gas_show).forEach(p => {
+    const x = dToX(p.depth, W, from, to);
+    ctx.fillStyle = '#d44020'; ctx.globalAlpha = 0.85;
+    ctx.fillRect(x - barW/2, HO+2, barW, HG - 2);
+    ctx.globalAlpha = 1;
+  });
+
+  ctx.strokeStyle = '#3a4055'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, HO+1); ctx.lineTo(W, HO+1); ctx.stroke();
+}
+
+// ── Draw Gas ──────────────────────────────────────────────────────────────────
+function drawGas(pts) {
+  const c = cvs.gas, ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const { from, to } = getWindow();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#1e2129'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx, W, H, from, to);
+
+  for (let v = 0; v <= GAS_MAX; v += 100) {
+    const y = H - (v / GAS_MAX) * H;
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(180,210,255,0.22)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+    ctx.fillText(v, 2, y - 2);
+  }
+
+  const gpts = pts.filter(p => p.gas != null);
+  if (gpts.length < 2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(dToX(gpts[0].depth, W, from, to), H);
+  gpts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), Math.max(0, H - ((p.gas - GAS_MIN) / (GAS_MAX - GAS_MIN)) * H)));
+  ctx.lineTo(dToX(gpts[gpts.length-1].depth, W, from, to), H);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(30,100,200,0.5)'; ctx.fill();
+
+  ctx.beginPath();
+  gpts.forEach((p, i) => {
+    const x = dToX(p.depth, W, from, to);
+    const y = Math.max(0, H - ((p.gas - GAS_MIN) / (GAS_MAX - GAS_MIN)) * H);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#4ab0ff'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+// ── Draw all ──────────────────────────────────────────────────────────────────
+function drawAll() {
+  const pts = visiblePts();
+  drawAxis();
+  drawGamma(pts);
+  drawRastros(pts);
+  drawGas(pts);
+
+  const sb = document.getElementById('statusBar');
+  if (!_data.length) { sb.textContent = 'Sin datos'; return; }
+  const mn = _data[0].depth, mx = _data[_data.length-1].depth;
+  sb.textContent = `${_data.length} pts | ${mn.toFixed(1)} — ${mx.toFixed(1)} m`;
+}
+
+function fitAll() {
+  if (!_data.length) return;
+  document.getElementById('depthFrom').value = Math.floor(_data[0].depth);
+  document.getElementById('depthTo').value   = Math.ceil(_data[_data.length-1].depth);
+  drawAll();
+}
+
+function clearAll() {
+  if (!confirm('¿Borrar todos los datos del Log?')) return;
+  _data = [];
+  drawAll();
+}
+
+// ── Cursor ────────────────────────────────────────────────────────────────────
+const chartsDiv = document.getElementById('charts');
+const cursor    = document.getElementById('cursorLine');
+chartsDiv.addEventListener('mousemove', e => {
+  const rect  = chartsDiv.getBoundingClientRect();
+  const x     = e.clientX - rect.left;
+  cursor.style.left    = x + 'px';
+  cursor.style.display = 'block';
+  const { from, to } = getWindow();
+  const depth = from + (x / chartsDiv.clientWidth) * (to - from);
+  document.getElementById('statusBar').textContent =
+    `Cursor: ${depth.toFixed(1)} m | ${_data.length} pts`;
+});
+chartsDiv.addEventListener('mouseleave', () => {
+  cursor.style.display = 'none';
+  drawAll();
+});
+
+// ── Import modal ──────────────────────────────────────────────────────────────
+let _impFile = null;
+
+function openImport()  { document.getElementById('importOverlay').classList.add('open'); }
+function closeImport() { document.getElementById('importOverlay').classList.remove('open'); }
+document.getElementById('importOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('importOverlay')) closeImport();
+});
+
+function _fillSelects(cols) {
+  const ids    = ['mapDepth','mapGamma','mapGas','mapOil','mapGasShow'];
+  const blanks = ['— seleccionar —','— ninguna —','— ninguna —','— ninguna —','— ninguna —'];
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.innerHTML = `<option value="">${blanks[i]}</option>`;
+    cols.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; el.appendChild(o); });
+  });
+  const auto = {
+    mapDepth:   ['DEPT','DEPTH','MD','PROFUNDIDAD','PROF','DEPTM'],
+    mapGamma:   ['GR','GAMMA','GR_N','GRC','GRS'],
+    mapGas:     ['GAS','GASTOT','GAS_TOTAL','GTOT'],
+    mapOil:     ['OIL','OIL_SHOW','PETROLEO'],
+    mapGasShow: ['GAS_SHOW','GASSHOW'],
+  };
+  for (const [id, cands] of Object.entries(auto)) {
+    const m = cols.find(c => cands.includes(c.toUpperCase()));
+    if (m) document.getElementById(id).value = m;
+  }
+}
+
+async function onFileSelected() {
+  const input = document.getElementById('impFile');
+  _impFile = input.files[0];
+  if (!_impFile) return;
+  const msg  = document.getElementById('importMsg');
+  const prev = document.getElementById('importPreview');
+  msg.textContent = 'Leyendo...'; msg.style.color = '#7ec8f7';
+  const fd = new FormData(); fd.append('file', _impFile);
+  try {
+    const res  = await fetch('/api/log/parse', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) { msg.textContent = '✗ ' + data.error; msg.style.color = '#e05050'; return; }
+    _fillSelects(data.columns);
+    const cols = data.columns, rows = data.preview;
+    let txt = cols.join('\t') + '\n';
+    rows.forEach(r => { txt += cols.map(c => r[c] != null ? r[c] : '—').join('\t') + '\n'; });
+    prev.textContent = txt;
+    msg.textContent = `✓ ${cols.length} columnas`; msg.style.color = '#50d090';
+  } catch(e) {
+    msg.textContent = '✗ Error'; msg.style.color = '#e05050';
+  }
+}
+
+async function doImport() {
+  if (!_impFile) { document.getElementById('importMsg').textContent = '⚠ Seleccioná un archivo'; return; }
+  const colDepth = document.getElementById('mapDepth').value;
+  if (!colDepth) { document.getElementById('importMsg').textContent = '⚠ Seleccioná columna profundidad'; return; }
+  const msg = document.getElementById('importMsg');
+  msg.textContent = 'Importando...'; msg.style.color = '#7ec8f7';
+
+  const fd = new FormData();
+  fd.append('file',         _impFile);
+  fd.append('col_depth',    colDepth);
+  fd.append('col_gamma',    document.getElementById('mapGamma').value);
+  fd.append('col_gas',      document.getElementById('mapGas').value);
+  fd.append('col_oil_show', document.getElementById('mapOil').value);
+  fd.append('col_gas_show', document.getElementById('mapGasShow').value);
+
+  try {
+    const res  = await fetch('/api/log/import', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) { msg.textContent = '✗ ' + data.error; msg.style.color = '#e05050'; return; }
+
+    // Load rows into client memory
+    _data = _data.concat(data.rows);
+    _data.sort((a, b) => a.depth - b.depth);
+
+    msg.textContent = `✓ ${data.inserted} filas cargadas`; msg.style.color = '#50d090';
+    fitAll();
+    setTimeout(closeImport, 1000);
+  } catch(e) {
+    msg.textContent = '✗ Error al importar'; msg.style.color = '#e05050';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => { resizeAll(); });
+</script>
+</body>
+</html>

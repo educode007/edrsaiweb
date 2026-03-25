@@ -1,4 +1,7 @@
 import os
+import io
+import re
+import csv
 import threading
 import time
 import sqlite3
@@ -209,6 +212,150 @@ def api_ingest():
                 pass
     
     return jsonify({'ok': True})
+
+@app.route('/log')
+@login_required
+def log_page():
+    return render_template('log.html')
+
+
+# ── LAS / CSV helpers ──────────────────────────────────────────────────────────
+def _parse_las(text):
+    lines = text.splitlines()
+    columns = []
+    in_curve = False
+    data_start = None
+    null_val = -9999.25
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if s.startswith('~C'):
+            in_curve = True
+            continue
+        if in_curve:
+            if s.startswith('~'):
+                in_curve = False
+                if s.upper().startswith('~A'):
+                    data_start = i + 1
+                continue
+            if s and not s.startswith('#'):
+                col = re.split(r'[\s.:]', s)[0].strip().upper()
+                if col:
+                    columns.append(col)
+        if s.upper().startswith('~A'):
+            data_start = i + 1
+        if s.upper().startswith('NULL') and '.' in s:
+            for p in s.split():
+                try:
+                    null_val = float(p)
+                    break
+                except ValueError:
+                    pass
+    if not columns or data_start is None:
+        return [], []
+    rows = []
+    for line in lines[data_start:]:
+        s = line.strip()
+        if not s or s.startswith('#'):
+            continue
+        vals = s.split()
+        if len(vals) != len(columns):
+            continue
+        row = {}
+        for col, val in zip(columns, vals):
+            try:
+                f = float(val)
+                row[col] = None if abs(f - null_val) < 0.01 else f
+            except ValueError:
+                row[col] = None
+        rows.append(row)
+    return columns, rows
+
+
+def _parse_csv_file(text):
+    sample = text[:2000]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=',;\t|')
+    except csv.Error:
+        dialect = csv.excel
+    reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+    columns = [c.strip().upper() for c in (reader.fieldnames or [])]
+    rows = []
+    for raw in reader:
+        row = {}
+        for k, v in raw.items():
+            col = k.strip().upper() if k else ''
+            try:
+                row[col] = float(v.strip().replace(',', '.')) if v and v.strip() not in ('', 'NA', 'NaN', 'NULL', '-9999', '-9999.25') else None
+            except (ValueError, AttributeError):
+                row[col] = None
+        rows.append(row)
+    return columns, rows
+
+
+def _to_float_safe(v):
+    if v is None:
+        return None
+    try:
+        return round(float(v), 3)
+    except (ValueError, TypeError):
+        return None
+
+
+@app.route('/api/log/parse', methods=['POST'])
+@login_required
+def api_log_parse():
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'ok': False, 'error': 'No file'}), 400
+    text = f.read().decode('utf-8', errors='ignore')
+    fname = f.filename.lower()
+    if fname.endswith('.las'):
+        columns, rows = _parse_las(text)
+    else:
+        columns, rows = _parse_csv_file(text)
+    if not columns:
+        return jsonify({'ok': False, 'error': 'No se pudieron leer columnas'}), 400
+    return jsonify({'ok': True, 'columns': columns, 'preview': rows[:5]})
+
+
+@app.route('/api/log/import', methods=['POST'])
+@login_required
+def api_log_import():
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'ok': False, 'error': 'No file'}), 400
+    text = f.read().decode('utf-8', errors='ignore')
+    fname = f.filename.lower()
+    col_depth    = request.form.get('col_depth', '').upper()
+    col_gamma    = request.form.get('col_gamma', '').upper()
+    col_gas      = request.form.get('col_gas', '').upper()
+    col_oil_show = request.form.get('col_oil_show', '').upper()
+    col_gas_show = request.form.get('col_gas_show', '').upper()
+    if fname.endswith('.las'):
+        _, rows = _parse_las(text)
+    else:
+        _, rows = _parse_csv_file(text)
+    if not rows:
+        return jsonify({'ok': False, 'error': 'Archivo vacío'}), 400
+    if not col_depth:
+        return jsonify({'ok': False, 'error': 'col_depth requerido'}), 400
+    mapped = []
+    for r in rows:
+        d = r.get(col_depth)
+        if d is None:
+            continue
+        mapped.append({
+            'depth':    round(float(d), 3),
+            'gamma':    _to_float_safe(r.get(col_gamma)) if col_gamma else None,
+            'gas':      _to_float_safe(r.get(col_gas))   if col_gas   else None,
+            'oil_show': 1 if r.get(col_oil_show) else 0,
+            'gas_show': 1 if r.get(col_gas_show) else 0,
+        })
+    if not mapped:
+        return jsonify({'ok': False, 'error': 'Sin filas válidas'}), 400
+    mapped.sort(key=lambda x: x['depth'])
+    return jsonify({'ok': True, 'rows': mapped, 'inserted': len(mapped)})
+
 
 @app.after_request
 def add_web_cors_headers(resp):
