@@ -56,10 +56,10 @@
       display: flex; flex-direction: column;
     }
     .lbl-spacer { height: 26px; border-bottom: 1px solid #2e3340; flex-shrink: 0; }
-    .track-lbl {
-      flex: 1; display: flex; flex-direction: column; justify-content: center;
+    .track-lbl { flex: 1; display: flex; flex-direction: column; justify-content: center;
       padding: 0 8px; border-bottom: 1px solid #2e3340; color: #b8ccee; font-size: 11px; font-weight: 700;
     }
+    .track-lbl.thin { flex: none; height: 40px; min-height: 40px; max-height: 40px; font-size: 10px; padding: 0 6px; }
     .track-lbl span { font-size: 9px; color: #5a7090; font-weight: 400; margin-top: 2px; }
     .track-lbl.rt-label { border-left: 3px solid #50c050; }
 
@@ -69,7 +69,7 @@
     #depthAxis { height: 26px; flex-shrink: 0; background: #10131a; border-bottom: 1px solid #2e3340; position: relative; overflow: hidden; }
     #depthAxis canvas { position: absolute; top: 0; left: 0; }
     .track { flex: 1; position: relative; border-bottom: 1px solid #1e2330; overflow: hidden; min-height: 50px; }
-    .track.thin { flex: 0.6; min-height: 22px; }
+    .track.thin { flex: none; height: 40px; min-height: 40px; max-height: 40px; }
     .track canvas { position: absolute; inset: 0; }
 
     #cursorLine {
@@ -90,6 +90,10 @@
     #importBox {
       background: #1e2535; border: 1px solid #3a4870; border-radius: 8px;
       padding: 22px 26px; width: 500px; max-width: 95vw;
+      max-height: 90vh; display: flex; flex-direction: column;
+    }
+    #importScroll {
+      overflow-y: auto; flex: 1; padding-right: 4px;
     }
     #importBox h2 { color: #7ec8f7; font-size: 14px; margin-bottom: 14px; font-weight: 800; }
     .imp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -185,35 +189,37 @@
 <div id="importOverlay">
   <div id="importBox">
     <h2>&#8593; Importar LAS / CSV</h2>
-    <div class="imp-row">
-      <label>Archivo (.las/.csv)</label>
-      <input type="file" id="impFile" accept=".las,.csv,.txt" onchange="onFileSelected()"/>
+    <div id="importScroll">
+      <div class="imp-row">
+        <label>Archivo (.las/.csv)</label>
+        <input type="file" id="impFile" accept=".las,.csv,.txt" onchange="onFileSelected()"/>
+      </div>
+      <div id="importPreview">Seleccioná un archivo...</div>
+      <div class="imp-row">
+        <label>Profundidad *</label>
+        <select id="mapDepth"><option value="">— seleccionar —</option></select>
+      </div>
+      <div class="imp-row">
+        <label>Gas Total</label>
+        <select id="mapGas"><option value="">— ninguna —</option></select>
+      </div>
+      <div class="imp-row">
+        <label>Rastros (0-4)</label>
+        <select id="mapOil"><option value="">— ninguna —</option></select>
+      </div>
+      <div style="color:#6080a8;font-size:11px;font-weight:700;margin:8px 0 4px;">Litología (0/1 o presencia)</div>
+      <div class="imp-row"><label>Arcilita</label>  <select id="mapArcilita"> <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>LimoArci</label>  <select id="mapLimoArci"> <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>ArnGrsa</label>   <select id="mapArnGrsa">  <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>ArnCong</label>   <select id="mapArnCong">  <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>Conglom</label>   <select id="mapConglom">  <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>Mudstone</label>  <select id="mapMudstone"> <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>WacStone</label>  <select id="mapWacStone"> <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>PacStone</label>  <select id="mapPacStone"> <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>GraStone</label>  <select id="mapGraStone"> <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>Evaptas</label>   <select id="mapEvaptas">  <option value="">— ninguna —</option></select></div>
+      <div class="imp-row"><label>RocaVolc</label>  <select id="mapRocaVolc"> <option value="">— ninguna —</option></select></div>
     </div>
-    <div id="importPreview">Seleccioná un archivo...</div>
-    <div class="imp-row">
-      <label>Profundidad *</label>
-      <select id="mapDepth"><option value="">— seleccionar —</option></select>
-    </div>
-    <div class="imp-row">
-      <label>Gas Total</label>
-      <select id="mapGas"><option value="">— ninguna —</option></select>
-    </div>
-    <div class="imp-row">
-      <label>Rastros (0-4)</label>
-      <select id="mapOil"><option value="">— ninguna —</option></select>
-    </div>
-    <div style="color:#6080a8;font-size:11px;font-weight:700;margin:8px 0 4px;">Litología (0/1 o presencia)</div>
-    <div class="imp-row"><label>Arcilita</label>  <select id="mapArcilita"> <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>LimoArci</label>  <select id="mapLimoArci"> <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>ArnGrsa</label>   <select id="mapArnGrsa">  <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>ArnCong</label>   <select id="mapArnCong">  <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>Conglom</label>   <select id="mapConglom">  <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>Mudstone</label>  <select id="mapMudstone"> <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>WacStone</label>  <select id="mapWacStone"> <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>PacStone</label>  <select id="mapPacStone"> <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>GraStone</label>  <select id="mapGraStone"> <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>Evaptas</label>   <select id="mapEvaptas">  <option value="">— ninguna —</option></select></div>
-    <div class="imp-row"><label>RocaVolc</label>  <select id="mapRocaVolc"> <option value="">— ninguna —</option></select></div>
     <div id="importMsg"></div>
     <div class="imp-actions">
       <button class="btn btn-success" onclick="doImport()">Importar</button>
