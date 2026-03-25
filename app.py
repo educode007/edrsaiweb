@@ -263,8 +263,8 @@ def _parse_las(text):
         row = {}
         for col, val in zip(columns, vals):
             try:
-                f = float(val)
-                row[col] = None if abs(f - null_val) < 0.01 else f
+                f = float(val.replace(',', '.'))
+                row[col] = None if abs(f - null_val) < 0.1 else f
             except ValueError:
                 row[col] = None
         rows.append(row)
@@ -344,12 +344,23 @@ def api_log_import():
         d = r.get(col_depth)
         if d is None:
             continue
+        # oil_show / gas_show: accept numeric (>0 = show) or bool
+        def _to_show(v):
+            if v is None:
+                return 0
+            try:
+                return 1 if float(v) > 0 else 0
+            except (ValueError, TypeError):
+                return 0
+
         mapped.append({
             'depth':    round(float(d), 3),
             'gamma':    _to_float_safe(r.get(col_gamma)) if col_gamma else None,
             'gas':      _to_float_safe(r.get(col_gas))   if col_gas   else None,
-            'oil_show': 1 if r.get(col_oil_show) else 0,
-            'gas_show': 1 if r.get(col_gas_show) else 0,
+            'oil_show': _to_show(r.get(col_oil_show)) if col_oil_show else 0,
+            'gas_show': _to_show(r.get(col_gas_show)) if col_gas_show else 0,
+            # extra: raw rastros value for intensity visualization
+            'rastros':  _to_float_safe(r.get(col_oil_show)) if col_oil_show else None,
         })
     if not mapped:
         return jsonify({'ok': False, 'error': 'Sin filas válidas'}), 400

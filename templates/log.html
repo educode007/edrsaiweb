@@ -131,7 +131,7 @@
     <div id="labels">
       <div style="height:28px;border-bottom:1px solid #2e3340;"></div>
       <div class="track-label" id="lblGamma"  style="flex:1;">Gamma Ray<span class="unit">0 — 150 API</span></div>
-      <div class="track-label" id="lblRastros" style="flex:1;">Rastros<span class="unit">Petróleo / Gas</span></div>
+      <div class="track-label" id="lblRastros" style="flex:1;">Rastros<span class="unit">0=S/R … 4=Abund.</span></div>
       <div class="track-label" id="lblGas"    style="flex:1;">Gas Total<span class="unit">0 — 500 unid.</span></div>
     </div>
 
@@ -190,7 +190,8 @@ let _data = [];   // [{depth, gamma, gas, oil_show, gas_show}]
 
 // Track scales
 const GAMMA_MIN = 0, GAMMA_MAX = 150;
-const GAS_MIN   = 0, GAS_MAX   = 500;
+const GAS_MIN   = 0;
+let   GAS_MAX   = 500;  // updated dynamically on import
 
 // Canvas refs
 const cvs = {
@@ -315,6 +316,10 @@ function drawGamma(pts) {
 }
 
 // ── Draw Rastros ──────────────────────────────────────────────────────────────
+// Rastros scale: 0=S/R, 1=Aislados, 2=Escasos, 3=Regulares, 4=Abundantes
+const RASTROS_MAX = 4;
+const RASTROS_COLORS = ['#1e2129','#6b3a0a','#c8820a','#e8a020','#ffe040'];
+
 function drawRastros(pts) {
   const c = cvs.rastros, ctx = c.getContext('2d');
   const W = c.width, H = c.height;
@@ -323,38 +328,43 @@ function drawRastros(pts) {
   ctx.fillStyle = '#1e2129'; ctx.fillRect(0, 0, W, H);
   drawGrid(ctx, W, H, from, to);
 
-  const HO = Math.round(H * 0.5);
-  const HG = H - HO - 2;
+  // Background hint
+  ctx.fillStyle = 'rgba(200,130,10,0.07)'; ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = 'rgba(200,130,10,0.1)';  ctx.fillRect(0, 0, W, HO);
-  ctx.fillStyle = 'rgba(30,80,200,0.08)';  ctx.fillRect(0, HO+2, W, HG);
-
+  // Legend: intensity scale labels on left
   ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(200,130,10,0.4)'; ctx.fillText('PETRÓLEO', 4, 12);
-  ctx.fillStyle = 'rgba(60,150,220,0.4)'; ctx.fillText('GAS', 4, HO+14);
+  ctx.fillStyle = 'rgba(230,180,80,0.5)';
+  ctx.fillText('RASTROS HC', 4, 11);
+  ['S/R','Aisl.','Esc.','Reg.','Abu.'].forEach((lbl, i) => {
+    const y = H - (i / RASTROS_MAX) * (H - 4) - 2;
+    ctx.fillStyle = 'rgba(200,160,60,0.25)';
+    ctx.fillText(lbl, 2, y);
+  });
 
-  // Bar width based on data density
-  let barW = 4;
-  if (pts.length > 1) {
-    const range = to - from;
-    barW = Math.max(2, Math.min(12, (W / range) * 0.8));
+  // Bar width
+  const range = to - from;
+  const barW = Math.max(2, Math.min(14, (W / range) * 0.9));
+
+  // Draw bars proportional to rastros intensity (0-4)
+  pts.forEach(p => {
+    const val = p.rastros != null ? p.rastros : (p.oil_show ? 1 : 0);
+    if (!val || val <= 0) return;
+    const x     = dToX(p.depth, W, from, to);
+    const ratio = Math.min(val, RASTROS_MAX) / RASTROS_MAX;
+    const barH  = Math.max(2, ratio * (H - 4));
+    const colIdx = Math.min(Math.round(val), RASTROS_COLORS.length - 1);
+    ctx.fillStyle   = RASTROS_COLORS[colIdx];
+    ctx.globalAlpha = 0.88;
+    ctx.fillRect(x - barW / 2, H - barH - 2, barW, barH);
+    ctx.globalAlpha = 1;
+  });
+
+  // Horizontal reference lines
+  for (let v = 1; v <= RASTROS_MAX; v++) {
+    const y = H - (v / RASTROS_MAX) * (H - 4) - 2;
+    ctx.strokeStyle = 'rgba(255,200,80,0.08)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
-
-  pts.filter(p => p.oil_show).forEach(p => {
-    const x = dToX(p.depth, W, from, to);
-    ctx.fillStyle = '#c8820a'; ctx.globalAlpha = 0.85;
-    ctx.fillRect(x - barW/2, 2, barW, HO - 4);
-    ctx.globalAlpha = 1;
-  });
-  pts.filter(p => p.gas_show).forEach(p => {
-    const x = dToX(p.depth, W, from, to);
-    ctx.fillStyle = '#d44020'; ctx.globalAlpha = 0.85;
-    ctx.fillRect(x - barW/2, HO+2, barW, HG - 2);
-    ctx.globalAlpha = 1;
-  });
-
-  ctx.strokeStyle = '#3a4055'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, HO+1); ctx.lineTo(W, HO+1); ctx.stroke();
 }
 
 // ── Draw Gas ──────────────────────────────────────────────────────────────────
@@ -456,10 +466,10 @@ function _fillSelects(cols) {
     cols.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; el.appendChild(o); });
   });
   const auto = {
-    mapDepth:   ['DEPT','DEPTH','MD','PROFUNDIDAD','PROF','DEPTM'],
+    mapDepth:   ['DEPT','DEPTH','MD','DPTH','PROFUNDIDAD','PROF','DEPTM'],
     mapGamma:   ['GR','GAMMA','GR_N','GRC','GRS'],
-    mapGas:     ['GAS','GASTOT','GAS_TOTAL','GTOT'],
-    mapOil:     ['OIL','OIL_SHOW','PETROLEO'],
+    mapGas:     ['GASTOTAL','GAS','GASTOT','GAS_TOTAL','GTOT'],
+    mapOil:     ['RASTROS','OIL','OIL_SHOW','PETROLEO'],
     mapGasShow: ['GAS_SHOW','GASSHOW'],
   };
   for (const [id, cands] of Object.entries(auto)) {
@@ -514,6 +524,9 @@ async function doImport() {
     // Load rows into client memory
     _data = _data.concat(data.rows);
     _data.sort((a, b) => a.depth - b.depth);
+    // Update GAS_MAX dynamically
+    const maxGas = Math.max(..._data.filter(p => p.gas != null).map(p => p.gas), 0);
+    if (maxGas > 0) GAS_MAX = Math.ceil(maxGas / 500) * 500;
 
     msg.textContent = `✓ ${data.inserted} filas cargadas`; msg.style.color = '#50d090';
     fitAll();
