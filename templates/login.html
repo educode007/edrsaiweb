@@ -9,148 +9,169 @@
 
     body {
       min-height: 100vh;
-      background: linear-gradient(135deg, #e8edf5 0%, #f4f6fb 50%, #dde4f0 100%);
+      background: linear-gradient(150deg, #1a1a1a 0%, #2c2c2c 50%, #1a1a1a 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      color: #1a2540;
+      color: #1a1a1a;
     }
 
-    /* subtle grid pattern overlay */
+    /* subtle diagonal grid overlay */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(rgba(100,130,200,0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(100,130,200,0.07) 1px, transparent 1px);
-      background-size: 40px 40px;
+        linear-gradient(rgba(232,82,26,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,82,26,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    /* large faint triangle watermark background */
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -10vh;
+      right: -8vw;
+      width: 55vw;
+      height: 55vw;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='50,4 96,96 4,96' fill='%23E8521A' opacity='0.06'/%3E%3C/svg%3E") no-repeat center/contain;
       pointer-events: none;
     }
 
     .card {
       background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.04), 0 20px 60px rgba(30,60,120,0.12);
-      padding: 48px 44px 40px;
+      border-radius: 4px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.25);
+      padding: 0;
       width: 100%;
-      max-width: 420px;
+      max-width: 400px;
       position: relative;
       z-index: 1;
+      overflow: hidden;
     }
 
-    /* top accent bar */
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #1a56db, #0ea5e9, #7c3aed);
-      border-radius: 16px 16px 0 0;
+    /* orange top bar */
+    .card-top {
+      background: #E8521A;
+      padding: 32px 40px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
     }
 
-    .logo-area {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .logo-badge {
-      display: inline-flex;
+    /* San Antonio logo SVG area */
+    .sa-logo {
+      display: flex;
       align-items: center;
-      gap: 10px;
-      background: linear-gradient(135deg, #1a3a8a, #1a56db);
-      color: #fff;
-      padding: 10px 22px;
-      border-radius: 10px;
-      margin-bottom: 14px;
+      gap: 12px;
     }
 
-    .logo-badge svg {
-      width: 22px; height: 22px;
+    .sa-logo svg {
+      width: 48px;
+      height: 48px;
       flex-shrink: 0;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
     }
 
-    .logo-text {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
+    .sa-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
     }
 
-    .logo-sub {
-      font-size: 12px;
-      color: rgba(255,255,255,0.75);
-      letter-spacing: 0.04em;
+    .sa-name span {
+      display: block;
+      font-size: 11px;
       font-weight: 400;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
     }
 
     .card-title {
-      font-size: 15px;
-      color: #64748b;
+      font-size: 13px;
+      color: rgba(255,255,255,0.80);
       font-weight: 400;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.02em;
+      border-top: 1px solid rgba(255,255,255,0.20);
+      padding-top: 14px;
+      width: 100%;
+    }
+
+    /* form body */
+    .card-body {
+      padding: 32px 40px 36px;
+      background: #fff;
     }
 
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
 
     label {
       display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: #475569;
-      letter-spacing: 0.05em;
+      font-size: 11px;
+      font-weight: 700;
+      color: #5a5a5a;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 7px;
     }
 
     input[type="text"],
     input[type="password"] {
       width: 100%;
       padding: 11px 14px;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 8px;
+      border: 1.5px solid #ddd;
+      border-radius: 3px;
       font-size: 14px;
-      color: #1a2540;
-      background: #f8fafc;
+      color: #1a1a1a;
+      background: #fafafa;
       outline: none;
       transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
     }
 
     input[type="text"]:focus,
     input[type="password"]:focus {
-      border-color: #1a56db;
+      border-color: #E8521A;
       background: #fff;
-      box-shadow: 0 0 0 3px rgba(26,86,219,0.10);
+      box-shadow: 0 0 0 3px rgba(232,82,26,0.12);
     }
 
     .btn-login {
       width: 100%;
       padding: 12px;
-      background: linear-gradient(135deg, #1a3a8a, #1a56db);
+      background: #E8521A;
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 3px;
       font-size: 14px;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       cursor: pointer;
       margin-top: 8px;
-      transition: opacity 0.18s, transform 0.12s;
+      transition: background 0.18s, transform 0.12s;
     }
 
-    .btn-login:hover  { opacity: 0.92; }
+    .btn-login:hover  { background: #d04410; }
     .btn-login:active { transform: scale(0.98); }
 
     .error-box {
-      background: #fff1f2;
-      border: 1.5px solid #fecdd3;
-      border-radius: 8px;
+      background: #fff5f2;
+      border: 1.5px solid #E8521A;
+      border-radius: 3px;
       padding: 10px 14px;
       font-size: 13px;
-      color: #be123c;
-      margin-bottom: 18px;
+      color: #c03a0a;
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -158,63 +179,79 @@
 
     .divider {
       border: none;
-      border-top: 1px solid #e2e8f0;
-      margin: 28px 0 20px;
+      border-top: 1px solid #ececec;
+      margin: 24px 0 18px;
     }
 
     .footer-note {
       text-align: center;
       font-size: 11px;
-      color: #94a3b8;
-      line-height: 1.6;
+      color: #aaa;
+      line-height: 1.7;
+    }
+
+    .footer-note strong {
+      color: #E8521A;
+      font-weight: 700;
     }
   </style>
 </head>
 <body>
   <div class="card">
 
-    <div class="logo-area">
-      <div class="logo-badge">
-        <!-- drill bit / signal icon -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+    <div class="card-top">
+      <div class="sa-logo">
+        <!-- San Antonio Internacional logo: orange triangle with white internal lines -->
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <!-- white triangle background shape -->
+          <polygon points="40,6 74,70 6,70" fill="#ffffff"/>
+          <!-- internal left line -->
+          <line x1="40" y1="6" x2="22" y2="70" stroke="#E8521A" stroke-width="5.5" stroke-linecap="round"/>
+          <!-- internal right line -->
+          <line x1="40" y1="6" x2="58" y2="70" stroke="#E8521A" stroke-width="5.5" stroke-linecap="round"/>
+          <!-- internal middle line (shorter) -->
+          <line x1="40" y1="14" x2="40" y2="62" stroke="#E8521A" stroke-width="5.5" stroke-linecap="round"/>
         </svg>
-        <div>
-          <div class="logo-text">EDR SAI</div>
-          <div class="logo-sub">Realtime Drilling Intelligence</div>
+        <div class="sa-name">
+          San Antonio
+          <span>Internacional</span>
         </div>
       </div>
-      <div class="card-title">Ingresar al sistema de monitoreo</div>
+      <div class="card-title">
+        EDR SAI &nbsp;·&nbsp; Sistema de Monitoreo de Perforación en Tiempo Real
+      </div>
     </div>
 
-    {% if error %}
-    <div class="error-box">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      {{ error }}
+    <div class="card-body">
+
+      {% if error %}
+      <div class="error-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/login" autocomplete="off">
+        <div class="form-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="username" placeholder="Ingresá tu usuario"
+                 autofocus autocomplete="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" placeholder="••••••••"
+                 autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-login">Ingresar</button>
+      </form>
+
+      <hr class="divider" />
+      <p class="footer-note">
+        <strong>EDR SAI Web</strong> &nbsp;·&nbsp; Realtime Drilling Intelligence<br />
+        © 2026 Eduardo Pinto &nbsp;·&nbsp; San Antonio Internacional
+      </p>
+
     </div>
-    {% endif %}
-
-    <form method="POST" action="/login" autocomplete="off">
-      <div class="form-group">
-        <label for="username">Usuario</label>
-        <input type="text" id="username" name="username" placeholder="Ingresá tu usuario"
-               autofocus autocomplete="username" required />
-      </div>
-      <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input type="password" id="password" name="password" placeholder="••••••••"
-               autocomplete="current-password" required />
-      </div>
-      <button type="submit" class="btn-login">Ingresar</button>
-    </form>
-
-    <hr class="divider" />
-    <p class="footer-note">
-      EDR SAI Web &nbsp;·&nbsp; Monitor de Perforación en Tiempo Real<br />
-      © 2026 Eduardo Pinto
-    </p>
-
   </div>
 </body>
 </html>
