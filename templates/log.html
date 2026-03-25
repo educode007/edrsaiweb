@@ -22,6 +22,7 @@
     .logout-link { margin-left: 10px; color: #99aacc; font-size: 11px; font-weight: 700; text-decoration: none; padding: 3px 8px; border: 1px solid #2a3a5a; border-radius: 4px; }
 
     #wrap { display: flex; flex-direction: column; height: calc(100vh - 42px); overflow: hidden; }
+    #wrap > #main { flex: 1; min-height: 0; }
 
     /* ── Toolbar ── */
     #toolbar {
@@ -49,11 +50,11 @@
     #statusBar { margin-left: auto; font-size: 11px; color: #7ec8f7; background: #131720; padding: 3px 10px; border-radius: 4px; }
 
     /* ── Main layout ── */
-    #main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    #main { display: flex; flex-direction: column; overflow: hidden; height: 100%; }
 
     /* ── Top zone: 3 original tracks — takes ALL remaining vertical space ── */
     #mainTop {
-      display: flex; flex: 1; overflow: hidden; min-height: 0;
+      display: flex; flex: 1; min-height: 0; overflow: hidden;
     }
     #labelsTop {
       width: 110px; flex-shrink: 0; background: #181d28; border-right: 2px solid #2e3340;
@@ -87,8 +88,9 @@
       border-top: 2px solid #3a5a3a;
       transition: height 0.2s ease;
       overflow: hidden;
+      height: 200px;
     }
-    #litoPanel.collapsed { height: 0 !important; }
+    #litoPanel.lito-collapsed { height: 22px; }
     #litoToggleRow {
       display: flex; align-items: center; gap: 0;
       background: #151e15; border-bottom: 1px solid #2a3a2a; flex-shrink: 0; height: 22px;
@@ -208,7 +210,7 @@
     </div>
 
     <!-- ── Lito panel: collapsible, fixed height, geo background ── -->
-    <div id="litoPanel" style="height:462px">
+    <div id="litoPanel">
       <div id="litoToggleRow">
         <button id="litoToggleBtn" onclick="toggleLito()">&#9660; Litología</button>
         <div id="litoToggleLine">11 pistas sedimentológicas</div>
@@ -370,15 +372,9 @@ function toggleLito() {
   _litoOpen = !_litoOpen;
   const panel = document.getElementById('litoPanel');
   const btn   = document.getElementById('litoToggleBtn');
-  if (_litoOpen) {
-    panel.style.height = '462px';
-    btn.textContent = '\u25BC Litología';
-  } else {
-    panel.style.height = '22px';
-    btn.textContent = '\u25B6 Litología';
-  }
-  // give DOM time to relayout then resize canvases
-  setTimeout(resizeAll, 50);
+  panel.classList.toggle('lito-collapsed', !_litoOpen);
+  btn.textContent = _litoOpen ? '\u25BC Litolog\u00eda' : '\u25B6 Litolog\u00eda';
+  setTimeout(resizeAll, 220);
 }
 
 // ── Grid helpers ──────────────────────────────────────────────────────────────
