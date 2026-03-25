@@ -77,6 +77,8 @@ _latest = {
 _config = {'gamma_offset': 15.0}
 _history = []          # in-memory history: list of web_payload dicts, newest last
 HISTORY_MAX = 2000     # keep last 2000 records in RAM
+_las_data = []         # LAS/CSV imported rows: [{depth, gas, rastros, oil_show, gas_show}]
+LAS_MAX   = 20000      # max rows to keep in RAM
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 def _fallback_compass_points(latest: dict):
@@ -359,13 +361,35 @@ def api_log_import():
             'gas':      _to_float_safe(r.get(col_gas))   if col_gas   else None,
             'oil_show': _to_show(r.get(col_oil_show)) if col_oil_show else 0,
             'gas_show': _to_show(r.get(col_gas_show)) if col_gas_show else 0,
-            # extra: raw rastros value for intensity visualization
             'rastros':  _to_float_safe(r.get(col_oil_show)) if col_oil_show else None,
         })
     if not mapped:
         return jsonify({'ok': False, 'error': 'Sin filas válidas'}), 400
     mapped.sort(key=lambda x: x['depth'])
+    # Persist server-side so data survives page refresh / tab switch
+    with _lock:
+        global _las_data
+        _las_data = mapped[:LAS_MAX]
     return jsonify({'ok': True, 'rows': mapped, 'inserted': len(mapped)})
+
+
+@app.route('/api/log/data', methods=['GET'])
+@login_required
+def api_log_data_get():
+    """Return currently stored LAS data."""
+    with _lock:
+        rows = list(_las_data)
+    return jsonify({'ok': True, 'rows': rows, 'count': len(rows)})
+
+
+@app.route('/api/log/data', methods=['DELETE'])
+@login_required
+def api_log_data_delete():
+    """Clear stored LAS data."""
+    with _lock:
+        global _las_data
+        _las_data = []
+    return jsonify({'ok': True})
 
 
 @app.after_request

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8"/>
@@ -432,8 +432,9 @@ function fitAll() {
   drawAll();
 }
 
-function clearLas() {
+async function clearLas() {
   if (!confirm('¿Borrar datos LAS?')) return;
+  await fetch('/api/log/data', { method: 'DELETE' });
   _las = []; GAS_MAX = 2000; drawAll();
 }
 
@@ -604,12 +605,13 @@ async function doImport() {
     const res  = await fetch('/api/log/import', { method: 'POST', body: fd });
     const data = await res.json();
     if (!data.ok) { msg.textContent = '✗ ' + data.error; msg.style.color = '#e05050'; return; }
-    _las = _las.concat(data.rows);
+    // Server already stored data — just load it back from server to stay in sync
+    _las = data.rows;
     _las.sort((a, b) => a.depth - b.depth);
     // update GAS_MAX
     const mx = Math.max(..._las.filter(p => p.gas != null).map(p => p.gas), 0);
     if (mx > 0) GAS_MAX = Math.ceil(mx / 500) * 500;
-    msg.textContent = `✓ ${data.inserted} filas`; msg.style.color = '#50d090';
+    msg.textContent = `✓ ${data.inserted} filas guardadas`; msg.style.color = '#50d090';
     fitAll();
     setTimeout(closeImport, 800);
   } catch(e) {
@@ -617,8 +619,26 @@ async function doImport() {
   }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener('load', resizeAll);
+// ── Init: load persisted LAS data from server ────────────────────────────────
+async function loadPersistedLas() {
+  try {
+    const res  = await fetch('/api/log/data');
+    const data = await res.json();
+    if (data.ok && data.rows.length) {
+      _las = data.rows;
+      _las.sort((a, b) => a.depth - b.depth);
+      const mx = Math.max(..._las.filter(p => p.gas != null).map(p => p.gas), 0);
+      if (mx > 0) GAS_MAX = Math.ceil(mx / 500) * 500;
+      document.getElementById('statusBar').textContent =
+        `LAS restaurado: ${_las.length} pts`;
+    }
+  } catch(e) { /* silent */ }
+}
+
+window.addEventListener('load', () => {
+  resizeAll();
+  loadPersistedLas();
+});
 </script>
 </body>
 </html>
