@@ -287,10 +287,11 @@ def _parse_las(text):
                     columns.append(col)
         if s.upper().startswith('~A'):
             data_start = i + 1
-        if s.upper().startswith('NULL') and '.' in s:
+        su = s.upper()
+        if su.startswith('NULL'):
             for p in s.split():
                 try:
-                    null_val = float(p)
+                    null_val = float(p.replace(',', '.'))
                     break
                 except ValueError:
                     pass
@@ -351,15 +352,27 @@ def api_log_parse():
     f = request.files.get('file')
     if not f:
         return jsonify({'ok': False, 'error': 'No file'}), 400
-    text = f.read().decode('utf-8', errors='ignore')
-    fname = f.filename.lower()
-    if fname.endswith('.las'):
-        columns, rows = _parse_las(text)
-    else:
-        columns, rows = _parse_csv_file(text)
-    if not columns:
-        return jsonify({'ok': False, 'error': 'No se pudieron leer columnas'}), 400
-    return jsonify({'ok': True, 'columns': columns, 'preview': rows[:5]})
+    try:
+        raw = f.read()
+        # Try UTF-8, then latin-1 (common in Argentine LAS files)
+        for enc in ('utf-8', 'latin-1', 'cp1252'):
+            try:
+                text = raw.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            text = raw.decode('utf-8', errors='ignore')
+        fname = f.filename.lower()
+        if fname.endswith('.las'):
+            columns, rows = _parse_las(text)
+        else:
+            columns, rows = _parse_csv_file(text)
+        if not columns:
+            return jsonify({'ok': False, 'error': 'No se pudieron detectar columnas. Verificar formato LAS/CSV'}), 400
+        return jsonify({'ok': True, 'columns': columns, 'preview': rows[:5]})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': f'Error al parsear: {str(e)}'}), 500
 
 
 @app.route('/api/log/import', methods=['POST'])
@@ -368,7 +381,14 @@ def api_log_import():
     f = request.files.get('file')
     if not f:
         return jsonify({'ok': False, 'error': 'No file'}), 400
-    text = f.read().decode('utf-8', errors='ignore')
+    raw = f.read()
+    for enc in ('utf-8', 'latin-1', 'cp1252'):
+        try:
+            text = raw.decode(enc); break
+        except UnicodeDecodeError:
+            continue
+    else:
+        text = raw.decode('utf-8', errors='ignore')
     fname = f.filename.lower()
     col_depth    = request.form.get('col_depth', '').upper()
     col_gamma    = request.form.get('col_gamma', '').upper()

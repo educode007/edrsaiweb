@@ -576,7 +576,15 @@ async function onFileSelected() {
   msg.textContent = 'Leyendo...'; msg.style.color = '#7ec8f7';
   const fd = new FormData(); fd.append('file', _impFile);
   try {
-    const res  = await fetch('/api/log/parse', { method: 'POST', body: fd });
+    const res = await fetch('/api/log/parse', { method: 'POST', body: fd });
+    if (res.status === 401) {
+      msg.textContent = '✗ Sesión expirada — recargá la página'; msg.style.color = '#e05050';
+      return;
+    }
+    if (!res.ok) {
+      msg.textContent = `✗ Error servidor (${res.status})`; msg.style.color = '#e05050';
+      return;
+    }
     const data = await res.json();
     if (!data.ok) { msg.textContent = '✗ ' + data.error; msg.style.color = '#e05050'; return; }
     _fillSelects(data.columns);
@@ -584,9 +592,9 @@ async function onFileSelected() {
     let txt = cols.join('\t') + '\n';
     rows.forEach(r => { txt += cols.map(c => r[c] != null ? r[c] : '—').join('\t') + '\n'; });
     document.getElementById('importPreview').textContent = txt;
-    msg.textContent = `✓ ${cols.length} columnas detectadas`; msg.style.color = '#50d090';
+    msg.textContent = `✓ ${cols.length} columnas — ${_impFile.name}`; msg.style.color = '#50d090';
   } catch(e) {
-    msg.textContent = '✗ Error de lectura'; msg.style.color = '#e05050';
+    msg.textContent = '✗ ' + (e.message || 'Error de red'); msg.style.color = '#e05050';
   }
 }
 
