@@ -281,8 +281,8 @@ function drawGamma() {
 
   // Y axis labels
   ctx.fillStyle = 'rgba(100,200,100,0.2)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
-  [0, 50, 100, 150].forEach(v => {
-    const y = H - (v / 150) * H;
+  [0, 64, 128, 192, 255].forEach(v => {
+    const y = H - (v / 255) * H;
     ctx.strokeStyle = 'rgba(80,180,80,0.06)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     ctx.fillText(v, 2, y - 2);
@@ -294,14 +294,14 @@ function drawGamma() {
   if (pts.length >= 2) {
     ctx.beginPath();
     ctx.moveTo(dToX(pts[0].depth, W, from, to), H);
-    pts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - Math.min(1, p.gamma / 150) * H));
+    pts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - Math.min(1, p.gamma / 255) * H));
     ctx.lineTo(dToX(pts[pts.length-1].depth, W, from, to), H);
     ctx.closePath();
     ctx.fillStyle = 'rgba(60,180,60,0.35)'; ctx.fill();
     ctx.beginPath();
     pts.forEach((p, i) => {
       const x = dToX(p.depth, W, from, to);
-      const y = H - Math.min(1, p.gamma / 150) * H;
+      const y = H - Math.min(1, p.gamma / 255) * H;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.strokeStyle = '#70e878'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -310,7 +310,7 @@ function drawGamma() {
   // RT "now" dot
   if (_rtNow.gamma != null && _rtNow.hole_depth != null) {
     const x = dToX(_rtNow.hole_depth, W, from, to);
-    const y = H - Math.min(1, _rtNow.gamma / 150) * H;
+    const y = H - Math.min(1, _rtNow.gamma / 255) * H;
     ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#90ffb0'; ctx.fill();
     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
