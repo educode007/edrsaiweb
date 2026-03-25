@@ -48,10 +48,14 @@
     #rtBadge.live { background: #1a3a10; color: #70ff70; }
     #statusBar { margin-left: auto; font-size: 11px; color: #7ec8f7; background: #131720; padding: 3px 10px; border-radius: 4px; }
 
-    /* ── Main: labels + charts ── */
-    #main { display: flex; flex: 1; overflow: hidden; }
+    /* ── Main layout ── */
+    #main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
-    #labels {
+    /* ── Top zone: 3 original tracks — takes ALL remaining vertical space ── */
+    #mainTop {
+      display: flex; flex: 1; overflow: hidden; min-height: 0;
+    }
+    #labelsTop {
       width: 110px; flex-shrink: 0; background: #181d28; border-right: 2px solid #2e3340;
       display: flex; flex-direction: column;
     }
@@ -59,19 +63,15 @@
     .track-lbl { flex: 1; display: flex; flex-direction: column; justify-content: center;
       padding: 0 8px; border-bottom: 1px solid #2e3340; color: #b8ccee; font-size: 11px; font-weight: 700;
     }
-    .track-lbl.thin { flex: none; height: 40px; min-height: 40px; max-height: 40px; font-size: 10px; padding: 0 6px; }
     .track-lbl span { font-size: 9px; color: #5a7090; font-weight: 400; margin-top: 2px; }
     .track-lbl.rt-label { border-left: 3px solid #50c050; }
-
     #charts {
       flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; cursor: crosshair;
     }
     #depthAxis { height: 26px; flex-shrink: 0; background: #10131a; border-bottom: 1px solid #2e3340; position: relative; overflow: hidden; }
     #depthAxis canvas { position: absolute; top: 0; left: 0; }
     .track { flex: 1; position: relative; border-bottom: 1px solid #1e2330; overflow: hidden; min-height: 50px; }
-    .track.thin { flex: none; height: 40px; min-height: 40px; max-height: 40px; }
     .track canvas { position: absolute; inset: 0; }
-
     #cursorLine {
       position: absolute; top: 0; bottom: 0; width: 1px;
       background: rgba(255,220,50,0.8); pointer-events: none; display: none; z-index: 10;
@@ -80,6 +80,49 @@
       position: absolute; top: 0; bottom: 0; width: 2px;
       background: rgba(80,255,80,0.7); pointer-events: none; display: none; z-index: 9;
     }
+
+    /* ── Lito zone: collapsible panel below the 3 tracks ── */
+    #litoPanel {
+      flex-shrink: 0; display: flex; flex-direction: column;
+      border-top: 2px solid #3a5a3a;
+      transition: height 0.2s ease;
+      overflow: hidden;
+    }
+    #litoPanel.collapsed { height: 0 !important; }
+    #litoToggleRow {
+      display: flex; align-items: center; gap: 0;
+      background: #151e15; border-bottom: 1px solid #2a3a2a; flex-shrink: 0; height: 22px;
+    }
+    #litoToggleBtn {
+      width: 110px; flex-shrink: 0; background: #1a2a1a; border: none; color: #80c080;
+      font-size: 10px; font-weight: 700; cursor: pointer; text-align: left; padding: 0 8px;
+      height: 22px; border-right: 2px solid #2e3340;
+    }
+    #litoToggleBtn:hover { background: #223322; }
+    #litoToggleLine { flex: 1; background: #151e15; height: 22px;
+      display: flex; align-items: center; padding-left: 8px;
+      font-size: 10px; color: #3a6a3a; font-style: italic;
+    }
+    #litoPanelInner { display: flex; flex: 1; overflow-y: auto; min-height: 0; }
+    #labelsLito {
+      width: 110px; flex-shrink: 0; background: #14201a; border-right: 2px solid #2e3340;
+      display: flex; flex-direction: column;
+    }
+    .track-lbl-lito {
+      height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 0 6px; border-bottom: 1px solid #2a3a2a;
+      color: #b8ccee; font-size: 10px; font-weight: 700;
+    }
+    .track-lbl-lito span { font-size: 8px; color: #4a6040; font-weight: 400; }
+    #chartsLito {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .track-lito {
+      height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
+      position: relative; border-bottom: 1px solid #2a3a2a; overflow: hidden;
+    }
+    .track-lito canvas { position: absolute; inset: 0; }
 
     /* ── Import modal ── */
     #importOverlay {
@@ -139,49 +182,67 @@
   </div>
 
   <div id="main">
-    <div id="labels">
-      <div class="lbl-spacer"></div>
-      <div class="track-lbl rt-label" id="lblGamma">
-        Gamma Ray<span>RT — EDRsai</span>
+
+    <!-- ── Top zone: 3 original tracks (flex:1 = full remaining height) ── -->
+    <div id="mainTop">
+      <div id="labelsTop">
+        <div class="lbl-spacer"></div>
+        <div class="track-lbl rt-label" id="lblGamma">
+          Gamma Ray<span>RT — EDRsai</span>
+        </div>
+        <div class="track-lbl" id="lblGas">
+          Gas Total<span>PPM — LAS/CSV</span>
+        </div>
+        <div class="track-lbl" id="lblRastros">
+          Rastros HC<span>0=S/R … 4=Abu.</span>
+        </div>
       </div>
-      <div class="track-lbl" id="lblGas">
-        Gas Total<span>PPM — LAS/CSV</span>
+      <div id="charts">
+        <div id="depthAxis"><canvas id="cvAxis"></canvas></div>
+        <div class="track" id="tGamma">  <canvas id="cvGamma"></canvas>  </div>
+        <div class="track" id="tGas">    <canvas id="cvGas"></canvas>    </div>
+        <div class="track" id="tRastros"><canvas id="cvRastros"></canvas></div>
+        <div id="cursorLine"></div>
+        <div id="nowLine"></div>
       </div>
-      <div class="track-lbl" id="lblRastros">
-        Rastros HC<span>0=S/R … 4=Abu.</span>
-      </div>
-      <div class="track-lbl thin" id="lblLitoArc">Arcilita<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoLimoArci">LimoArci<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoArnGrsa">ArnGrsa<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoArnCong">ArnCong<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoConglom">Conglom<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoMud">Mudstone<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoWac">WacStone<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoPac">PacStone<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoGra">GraStone<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoEva">Evaptas<span>LAS</span></div>
-      <div class="track-lbl thin" id="lblLitoVolc">RocaVolc<span>LAS</span></div>
     </div>
 
-    <div id="charts">
-      <div id="depthAxis"><canvas id="cvAxis"></canvas></div>
-      <div class="track" id="tGamma">  <canvas id="cvGamma"></canvas>  </div>
-      <div class="track" id="tGas">    <canvas id="cvGas"></canvas>    </div>
-      <div class="track" id="tRastros"><canvas id="cvRastros"></canvas></div>
-      <div class="track thin" id="tLitoArc">     <canvas id="cvLitoArc"></canvas></div>
-      <div class="track thin" id="tLitoLimoArci"><canvas id="cvLitoLimoArci"></canvas></div>
-      <div class="track thin" id="tLitoArnGrsa"> <canvas id="cvLitoArnGrsa"></canvas></div>
-      <div class="track thin" id="tLitoArnCong"> <canvas id="cvLitoArnCong"></canvas></div>
-      <div class="track thin" id="tLitoConglom"> <canvas id="cvLitoConglom"></canvas></div>
-      <div class="track thin" id="tLitoMud">     <canvas id="cvLitoMud"></canvas></div>
-      <div class="track thin" id="tLitoWac">     <canvas id="cvLitoWac"></canvas></div>
-      <div class="track thin" id="tLitoPac">     <canvas id="cvLitoPac"></canvas></div>
-      <div class="track thin" id="tLitoGra">     <canvas id="cvLitoGra"></canvas></div>
-      <div class="track thin" id="tLitoEva">     <canvas id="cvLitoEva"></canvas></div>
-      <div class="track thin" id="tLitoVolc">    <canvas id="cvLitoVolc"></canvas></div>
-      <div id="cursorLine"></div>
-      <div id="nowLine"></div>
+    <!-- ── Lito panel: collapsible, fixed height, geo background ── -->
+    <div id="litoPanel" style="height:462px">
+      <div id="litoToggleRow">
+        <button id="litoToggleBtn" onclick="toggleLito()">&#9660; Litología</button>
+        <div id="litoToggleLine">11 pistas sedimentológicas</div>
+      </div>
+      <div id="litoPanelInner">
+        <div id="labelsLito">
+          <div class="track-lbl-lito" style="background:#1a1510">Arcilita<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#1c1a10">LimoArci<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#1e1c0e">ArnGrsa<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#1c1a0c">ArnCong<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#1e1208">Conglom<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#0e1420">Mudstone<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#0c1a24">WacStone<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#0c1e22">PacStone<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#0e1e16">GraStone<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#1a0e1e">Evaptas<span>LAS</span></div>
+          <div class="track-lbl-lito" style="background:#1e0e0e">RocaVolc<span>LAS</span></div>
+        </div>
+        <div id="chartsLito">
+          <div class="track-lito" id="tLitoArc"      style="background:#1a1510"><canvas id="cvLitoArc"></canvas></div>
+          <div class="track-lito" id="tLitoLimoArci" style="background:#1c1a10"><canvas id="cvLitoLimoArci"></canvas></div>
+          <div class="track-lito" id="tLitoArnGrsa"  style="background:#1e1c0e"><canvas id="cvLitoArnGrsa"></canvas></div>
+          <div class="track-lito" id="tLitoArnCong"  style="background:#1c1a0c"><canvas id="cvLitoArnCong"></canvas></div>
+          <div class="track-lito" id="tLitoConglom"  style="background:#1e1208"><canvas id="cvLitoConglom"></canvas></div>
+          <div class="track-lito" id="tLitoMud"      style="background:#0e1420"><canvas id="cvLitoMud"></canvas></div>
+          <div class="track-lito" id="tLitoWac"      style="background:#0c1a24"><canvas id="cvLitoWac"></canvas></div>
+          <div class="track-lito" id="tLitoPac"      style="background:#0c1e22"><canvas id="cvLitoPac"></canvas></div>
+          <div class="track-lito" id="tLitoGra"      style="background:#0e1e16"><canvas id="cvLitoGra"></canvas></div>
+          <div class="track-lito" id="tLitoEva"      style="background:#1a0e1e"><canvas id="cvLitoEva"></canvas></div>
+          <div class="track-lito" id="tLitoVolc"     style="background:#1e0e0e"><canvas id="cvLitoVolc"></canvas></div>
+        </div>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -302,6 +363,23 @@ function resizeAll() {
   drawAll();
 }
 window.addEventListener('resize', resizeAll);
+
+// ── Lito panel toggle ────────────────────────────────────────────────────────
+let _litoOpen = true;
+function toggleLito() {
+  _litoOpen = !_litoOpen;
+  const panel = document.getElementById('litoPanel');
+  const btn   = document.getElementById('litoToggleBtn');
+  if (_litoOpen) {
+    panel.style.height = '462px';
+    btn.textContent = '\u25BC Litología';
+  } else {
+    panel.style.height = '22px';
+    btn.textContent = '\u25B6 Litología';
+  }
+  // give DOM time to relayout then resize canvases
+  setTimeout(resizeAll, 50);
+}
 
 // ── Grid helpers ──────────────────────────────────────────────────────────────
 function drawDepthGrid(ctx, W, H, from, to) {
@@ -484,26 +562,22 @@ function drawLitoTrack(trackCfg) {
   const ctx = c.getContext('2d');
   const W = c.width, H = c.height;
   const { from, to } = getWindow();
+  // Clear with full transparency so CSS geo background shows through
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0d1018'; ctx.fillRect(0, 0, W, H);
   drawDepthGrid(ctx, W, H, from, to);
-
-  // Label del track (color propio, esquina superior izquierda)
-  ctx.fillStyle = trackCfg.color; ctx.font = '8px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText(trackCfg.label, 2, H - 3);
 
   const pts = _las.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p[trackCfg.key] != null && p[trackCfg.key] > 0);
   if (!pts.length) return;
 
   const range = to - from;
   const barW  = Math.max(2, Math.min(20, (W / Math.max(range, 1)) * 0.9));
-  const fillH = Math.max(2, H - 4);
+  const fillH = Math.max(2, H - 2);
 
   ctx.fillStyle = trackCfg.color;
-  ctx.globalAlpha = 0.85;
+  ctx.globalAlpha = 0.88;
   pts.forEach(p => {
     const x = dToX(p.depth, W, from, to);
-    ctx.fillRect(x - barW / 2, 2, barW, fillH);
+    ctx.fillRect(x - barW / 2, 1, barW, fillH);
   });
   ctx.globalAlpha = 1;
 }
