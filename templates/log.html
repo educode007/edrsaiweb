@@ -177,8 +177,10 @@
     <input type="number" id="depthTo" value="500" step="10"/>
     <button class="btn btn-primary" onclick="drawAll()">Ver</button>
     <button class="btn btn-primary" onclick="fitAll()">Ajustar todo</button>
+    {% if role == 'admin' %}
     <button class="btn btn-success" onclick="openImport()">&#8593; LAS / CSV</button>
     <button class="btn btn-danger"  onclick="clearLas()">Limpiar LAS</button>
+    {% endif %}
     <div id="rtBadge">&#11044; Sin señal RT</div>
     <div id="statusBar">Sin datos</div>
   </div>

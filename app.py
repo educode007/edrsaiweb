@@ -16,15 +16,29 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
-# Credentials: set EDR_USER / EDR_PASSWORD env vars, defaults below
+# Admin credentials
 _AUTH_USER = os.environ.get('EDR_USER', 'admin')
 _AUTH_PASS = os.environ.get('EDR_PASSWORD', 'edrsai2026')
+# Viewer credentials (read-only)
+_VIEWER_USER = os.environ.get('EDR_VIEWER_USER', 'viewer')
+_VIEWER_PASS = os.environ.get('EDR_VIEWER_PASSWORD', 'viewer2026')
 
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('logged_in'):
             return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    """Restrict endpoint to admin role only."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login_page'))
+        if session.get('role') != 'admin':
+            return jsonify({'ok': False, 'error': 'Permiso denegado'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -201,6 +215,12 @@ def login_page():
         if username == _AUTH_USER and password == _AUTH_PASS:
             session['logged_in'] = True
             session['username'] = username
+            session['role'] = 'admin'
+            return redirect(url_for('index'))
+        elif username == _VIEWER_USER and password == _VIEWER_PASS:
+            session['logged_in'] = True
+            session['username'] = username
+            session['role'] = 'viewer'
             return redirect(url_for('index'))
         error = 'Usuario o contraseña incorrectos.'
     return render_template('login.html', error=error)
@@ -213,12 +233,12 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    return render_template('web.html')
+    return render_template('web.html', role=session.get('role', 'viewer'))
 
 @app.route('/web')
 @login_required
 def web_page():
-    return render_template('web.html')
+    return render_template('web.html', role=session.get('role', 'viewer'))
 
 @app.route('/api/web/state')
 def api_web_state():
@@ -288,7 +308,7 @@ def api_ingest():
 @app.route('/log')
 @login_required
 def log_page():
-    return render_template('log.html')
+    return render_template('log.html', role=session.get('role', 'viewer'))
 
 
 # ── LAS / CSV helpers ──────────────────────────────────────────────────────────
@@ -384,7 +404,7 @@ def _to_float_safe(v):
 
 
 @app.route('/api/log/parse', methods=['POST'])
-@login_required
+@admin_required
 def api_log_parse():
     f = request.files.get('file')
     if not f:
@@ -405,7 +425,7 @@ def api_log_parse():
 
 
 @app.route('/api/log/import', methods=['POST'])
-@login_required
+@admin_required
 def api_log_import():
     f = request.files.get('file')
     if not f:
@@ -492,7 +512,7 @@ def api_log_data_get():
 
 
 @app.route('/api/log/data', methods=['DELETE'])
-@login_required
+@admin_required
 def api_log_data_delete():
     """Clear stored LAS data from RAM and SQLite."""
     global _las_data
