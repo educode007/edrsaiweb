@@ -264,6 +264,15 @@ def log_page():
 
 
 # ── LAS / CSV helpers ──────────────────────────────────────────────────────────
+def _decode_bytes(raw):
+    """Decode bytes trying UTF-8, latin-1, cp1252 in order."""
+    for enc in ('utf-8', 'latin-1', 'cp1252'):
+        try:
+            return raw.decode(enc)
+        except (UnicodeDecodeError, Exception):
+            continue
+    return raw.decode('utf-8', errors='ignore')
+
 def _parse_las(text):
     lines = text.splitlines()
     columns = []
@@ -354,15 +363,7 @@ def api_log_parse():
         return jsonify({'ok': False, 'error': 'No file'}), 400
     try:
         raw = f.read()
-        # Try UTF-8, then latin-1 (common in Argentine LAS files)
-        for enc in ('utf-8', 'latin-1', 'cp1252'):
-            try:
-                text = raw.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            text = raw.decode('utf-8', errors='ignore')
+        text = _decode_bytes(raw)
         fname = f.filename.lower()
         if fname.endswith('.las'):
             columns, rows = _parse_las(text)
@@ -372,7 +373,7 @@ def api_log_parse():
             return jsonify({'ok': False, 'error': 'No se pudieron detectar columnas. Verificar formato LAS/CSV'}), 400
         return jsonify({'ok': True, 'columns': columns, 'preview': rows[:5]})
     except Exception as e:
-        return jsonify({'ok': False, 'error': f'Error al parsear: {str(e)}'}), 500
+        return jsonify({'ok': False, 'error': 'Error al parsear: ' + str(e)}), 500
 
 
 @app.route('/api/log/import', methods=['POST'])
@@ -381,14 +382,7 @@ def api_log_import():
     f = request.files.get('file')
     if not f:
         return jsonify({'ok': False, 'error': 'No file'}), 400
-    raw = f.read()
-    for enc in ('utf-8', 'latin-1', 'cp1252'):
-        try:
-            text = raw.decode(enc); break
-        except UnicodeDecodeError:
-            continue
-    else:
-        text = raw.decode('utf-8', errors='ignore')
+    text = _decode_bytes(f.read())
     fname = f.filename.lower()
     col_depth    = request.form.get('col_depth', '').upper()
     col_gamma    = request.form.get('col_gamma', '').upper()
