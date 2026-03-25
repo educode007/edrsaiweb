@@ -280,14 +280,14 @@ function drawGamma() {
   drawDepthGrid(ctx, W, H, from, to);
 
   // Y axis labels
-  ctx.fillStyle = 'rgba(100,200,100,0.2)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
   [0, 64, 128, 192, 255].forEach(v => {
     const y = H - (v / 255) * H;
-    ctx.strokeStyle = 'rgba(80,180,80,0.06)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     ctx.fillText(v, 2, y - 2);
   });
-  ctx.fillStyle = 'rgba(100,200,100,0.4)'; ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.textAlign = 'right';
   ctx.fillText('API', W - 2, 12);
 
   const pts = _rt.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p.gamma != null);
@@ -326,15 +326,15 @@ function drawGas() {
   ctx.fillStyle = '#0f1520'; ctx.fillRect(0, 0, W, H);
   drawDepthGrid(ctx, W, H, from, to);
 
-  ctx.fillStyle = 'rgba(60,140,255,0.18)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
   const steps = [0, Math.round(GAS_MAX/4), Math.round(GAS_MAX/2), Math.round(GAS_MAX*3/4), GAS_MAX];
   steps.forEach(v => {
     const y = H - (v / GAS_MAX) * H;
-    ctx.strokeStyle = 'rgba(40,80,200,0.07)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     ctx.fillText(v, 2, y - 2);
   });
-  ctx.fillStyle = 'rgba(80,160,255,0.4)'; ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.textAlign = 'right';
   ctx.fillText('PPM', W - 2, 12);
 
   const pts = _las.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p.gas != null);
@@ -370,7 +370,7 @@ function drawRastros() {
     ctx.strokeStyle = 'rgba(255,180,40,0.07)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
-  ctx.fillStyle = 'rgba(220,160,40,0.3)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
   ['S/R','Ais.','Esc.','Reg.','Abu.'].forEach((lbl, i) => {
     const y = H - (i / RASTROS_MAX) * (H - 4) - 2;
     ctx.fillText(lbl, 2, y - 1);
