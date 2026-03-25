@@ -69,6 +69,7 @@
     #depthAxis { height: 26px; flex-shrink: 0; background: #10131a; border-bottom: 1px solid #2e3340; position: relative; overflow: hidden; }
     #depthAxis canvas { position: absolute; top: 0; left: 0; }
     .track { flex: 1; position: relative; border-bottom: 1px solid #1e2330; overflow: hidden; min-height: 50px; }
+    .track.thin { flex: 0.6; min-height: 22px; }
     .track canvas { position: absolute; inset: 0; }
 
     #cursorLine {
@@ -145,6 +146,17 @@
       <div class="track-lbl" id="lblRastros">
         Rastros HC<span>0=S/R … 4=Abu.</span>
       </div>
+      <div class="track-lbl thin" id="lblLitoArc">Arcilita<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoLimoArci">LimoArci<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoArnGrsa">ArnGrsa<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoArnCong">ArnCong<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoConglom">Conglom<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoMud">Mudstone<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoWac">WacStone<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoPac">PacStone<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoGra">GraStone<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoEva">Evaptas<span>LAS</span></div>
+      <div class="track-lbl thin" id="lblLitoVolc">RocaVolc<span>LAS</span></div>
     </div>
 
     <div id="charts">
@@ -152,6 +164,17 @@
       <div class="track" id="tGamma">  <canvas id="cvGamma"></canvas>  </div>
       <div class="track" id="tGas">    <canvas id="cvGas"></canvas>    </div>
       <div class="track" id="tRastros"><canvas id="cvRastros"></canvas></div>
+      <div class="track thin" id="tLitoArc">     <canvas id="cvLitoArc"></canvas></div>
+      <div class="track thin" id="tLitoLimoArci"><canvas id="cvLitoLimoArci"></canvas></div>
+      <div class="track thin" id="tLitoArnGrsa"> <canvas id="cvLitoArnGrsa"></canvas></div>
+      <div class="track thin" id="tLitoArnCong"> <canvas id="cvLitoArnCong"></canvas></div>
+      <div class="track thin" id="tLitoConglom"> <canvas id="cvLitoConglom"></canvas></div>
+      <div class="track thin" id="tLitoMud">     <canvas id="cvLitoMud"></canvas></div>
+      <div class="track thin" id="tLitoWac">     <canvas id="cvLitoWac"></canvas></div>
+      <div class="track thin" id="tLitoPac">     <canvas id="cvLitoPac"></canvas></div>
+      <div class="track thin" id="tLitoGra">     <canvas id="cvLitoGra"></canvas></div>
+      <div class="track thin" id="tLitoEva">     <canvas id="cvLitoEva"></canvas></div>
+      <div class="track thin" id="tLitoVolc">    <canvas id="cvLitoVolc"></canvas></div>
       <div id="cursorLine"></div>
       <div id="nowLine"></div>
     </div>
@@ -179,6 +202,18 @@
       <label>Rastros (0-4)</label>
       <select id="mapOil"><option value="">— ninguna —</option></select>
     </div>
+    <div style="color:#6080a8;font-size:11px;font-weight:700;margin:8px 0 4px;">Litología (0/1 o presencia)</div>
+    <div class="imp-row"><label>Arcilita</label>  <select id="mapArcilita"> <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>LimoArci</label>  <select id="mapLimoArci"> <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>ArnGrsa</label>   <select id="mapArnGrsa">  <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>ArnCong</label>   <select id="mapArnCong">  <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>Conglom</label>   <select id="mapConglom">  <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>Mudstone</label>  <select id="mapMudstone"> <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>WacStone</label>  <select id="mapWacStone"> <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>PacStone</label>  <select id="mapPacStone"> <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>GraStone</label>  <select id="mapGraStone"> <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>Evaptas</label>   <select id="mapEvaptas">  <option value="">— ninguna —</option></select></div>
+    <div class="imp-row"><label>RocaVolc</label>  <select id="mapRocaVolc"> <option value="">— ninguna —</option></select></div>
     <div id="importMsg"></div>
     <div class="imp-actions">
       <button class="btn btn-success" onclick="doImport()">Importar</button>
@@ -200,6 +235,21 @@ let GAS_MAX = 60000;
 const RASTROS_MAX = 4;
 const RASTROS_COLORS = ['#1e2129','#5a3a00','#c87800','#f0b820','#ffe060'];
 
+// ── Litología tracks config ──────────────────────────────────────────────────
+const LITO_TRACKS = [
+  { key: 'arcilita',  id: 'LitoArc',      label: 'Arcilita',  color: '#8B6914' },
+  { key: 'limoarci',  id: 'LitoLimoArci', label: 'LimoArci',  color: '#c8a050' },
+  { key: 'arngrsa',   id: 'LitoArnGrsa',  label: 'ArnGrsa',   color: '#e8d080' },
+  { key: 'arncong',   id: 'LitoArnCong',  label: 'ArnCong',   color: '#d4b840' },
+  { key: 'conglom',   id: 'LitoConglom',  label: 'Conglom',   color: '#c06020' },
+  { key: 'mudstone',  id: 'LitoMud',      label: 'Mudstone',  color: '#607898' },
+  { key: 'wacstone',  id: 'LitoWac',      label: 'WacStone',  color: '#50a0d0' },
+  { key: 'pacstone',  id: 'LitoPac',      label: 'PacStone',  color: '#40c0c0' },
+  { key: 'grastone',  id: 'LitoGra',      label: 'GraStone',  color: '#80d0a0' },
+  { key: 'evaptas',   id: 'LitoEva',      label: 'Evaptas',   color: '#d080d0' },
+  { key: 'rocavolc',  id: 'LitoVolc',     label: 'RocaVolc',  color: '#e05050' },
+];
+
 // ── Canvas refs ───────────────────────────────────────────────────────────────
 const cvs = {
   axis:    document.getElementById('cvAxis'),
@@ -207,6 +257,9 @@ const cvs = {
   gas:     document.getElementById('cvGas'),
   rastros: document.getElementById('cvRastros'),
 };
+LITO_TRACKS.forEach(t => {
+  cvs[t.id] = document.getElementById('cv' + t.id);
+});
 
 // ── Window helpers ────────────────────────────────────────────────────────────
 function getWindow() {
@@ -234,6 +287,11 @@ function resizeAll() {
     const c    = document.getElementById(cId);
     c.width  = wrap.clientWidth;
     c.height = wrap.clientHeight;
+  });
+  LITO_TRACKS.forEach(t => {
+    const wrap = document.getElementById('t' + t.id);
+    const c    = cvs[t.id];
+    if (wrap && c) { c.width = wrap.clientWidth; c.height = wrap.clientHeight; }
   });
   drawAll();
 }
@@ -413,12 +471,44 @@ function updateNowLine() {
   nowLine.style.display = 'block';
 }
 
+// ── Draw Litología tracks ────────────────────────────────────────────────────
+function drawLitoTrack(trackCfg) {
+  const c = cvs[trackCfg.id];
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const { from, to } = getWindow();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1018'; ctx.fillRect(0, 0, W, H);
+  drawDepthGrid(ctx, W, H, from, to);
+
+  // Label del track (color propio, esquina superior izquierda)
+  ctx.fillStyle = trackCfg.color; ctx.font = '8px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText(trackCfg.label, 2, H - 3);
+
+  const pts = _las.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p[trackCfg.key] != null && p[trackCfg.key] > 0);
+  if (!pts.length) return;
+
+  const range = to - from;
+  const barW  = Math.max(2, Math.min(20, (W / Math.max(range, 1)) * 0.9));
+  const fillH = Math.max(2, H - 4);
+
+  ctx.fillStyle = trackCfg.color;
+  ctx.globalAlpha = 0.85;
+  pts.forEach(p => {
+    const x = dToX(p.depth, W, from, to);
+    ctx.fillRect(x - barW / 2, 2, barW, fillH);
+  });
+  ctx.globalAlpha = 1;
+}
+
 // ── Draw all ──────────────────────────────────────────────────────────────────
 function drawAll() {
   drawDepthAxis();
   drawGamma();
   drawGas();
   drawRastros();
+  LITO_TRACKS.forEach(t => drawLitoTrack(t));
   updateNowLine();
   updateStatus();
 }
@@ -579,17 +669,31 @@ document.getElementById('importOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('importOverlay')) closeImport();
 });
 
+const _LITO_SELECT_IDS = ['mapArcilita','mapLimoArci','mapArnGrsa','mapArnCong','mapConglom','mapMudstone','mapWacStone','mapPacStone','mapGraStone','mapEvaptas','mapRocaVolc'];
+
 function _fillSelects(cols) {
-  ['mapDepth','mapGas','mapOil'].forEach((id, i) => {
-    const blanks = ['— seleccionar —','— ninguna —','— ninguna —'];
+  const allIds = ['mapDepth','mapGas','mapOil', ..._LITO_SELECT_IDS];
+  const blanks = { mapDepth: '— seleccionar —' };
+  allIds.forEach(id => {
     const el = document.getElementById(id);
-    el.innerHTML = `<option value="">${blanks[i]}</option>`;
+    el.innerHTML = `<option value="">${blanks[id] || '— ninguna —'}</option>`;
     cols.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; el.appendChild(o); });
   });
   const auto = {
-    mapDepth: ['DEPT','DEPTH','MD','DPTH','PROF','PROFUNDIDAD'],
-    mapGas:   ['GASTOTAL','GAS','GASTOT','GAS_TOTAL','GTOT'],
-    mapOil:   ['RASTROS','OIL','OIL_SHOW','PETROLEO'],
+    mapDepth:    ['DEPT','DEPTH','MD','DPTH','PROF','PROFUNDIDAD'],
+    mapGas:      ['GASTOTAL','GAS','GASTOT','GAS_TOTAL','GTOT'],
+    mapOil:      ['RASTROS','OIL','OIL_SHOW','PETROLEO'],
+    mapArcilita: ['ARCILITA','ARCILLA','ARCI'],
+    mapLimoArci: ['LIMOARCI','LIMO_ARCI','LIMOARCILITA'],
+    mapArnGrsa:  ['ARNGRSA','ARN_GRSA','ARENAGRUESA','ARENA_GRUESA'],
+    mapArnCong:  ['ARNCONG','ARN_CONG','ARENACONG'],
+    mapConglom:  ['CONGLOM','CONGLOMERADO'],
+    mapMudstone: ['MUDSTONE','MUD'],
+    mapWacStone: ['WACSTONE','WACKSTONE','WAC'],
+    mapPacStone: ['PACSTONE','PACKSTONE','PAC'],
+    mapGraStone: ['GRASTONE','GRAINSTONE','GRA'],
+    mapEvaptas:  ['EVAPTAS','EVAPORITAS','EVAP'],
+    mapRocaVolc: ['ROCAVOLC','VOLCANICA','VOLC'],
   };
   for (const [id, cands] of Object.entries(auto)) {
     const m = cols.find(c => cands.includes(c.toUpperCase()));
@@ -638,6 +742,17 @@ async function doImport() {
   fd.append('col_depth',    colDepth);
   fd.append('col_gas',      document.getElementById('mapGas').value);
   fd.append('col_oil_show', document.getElementById('mapOil').value);
+  fd.append('col_arcilita', document.getElementById('mapArcilita').value);
+  fd.append('col_limoarci', document.getElementById('mapLimoArci').value);
+  fd.append('col_arngrsa',  document.getElementById('mapArnGrsa').value);
+  fd.append('col_arncong',  document.getElementById('mapArnCong').value);
+  fd.append('col_conglom',  document.getElementById('mapConglom').value);
+  fd.append('col_mudstone', document.getElementById('mapMudstone').value);
+  fd.append('col_wacstone', document.getElementById('mapWacStone').value);
+  fd.append('col_pacstone', document.getElementById('mapPacStone').value);
+  fd.append('col_grastone', document.getElementById('mapGraStone').value);
+  fd.append('col_evaptas',  document.getElementById('mapEvaptas').value);
+  fd.append('col_rocavolc', document.getElementById('mapRocaVolc').value);
   try {
     const res  = await fetch('/api/log/import', { method: 'POST', body: fd });
     const data = await res.json();

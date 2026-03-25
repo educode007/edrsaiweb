@@ -63,22 +63,63 @@ def _db_init():
             gas      REAL,
             rastros  REAL,
             oil_show INTEGER DEFAULT 0,
-            gas_show INTEGER DEFAULT 0
+            gas_show INTEGER DEFAULT 0,
+            arcilita INTEGER DEFAULT 0,
+            limoarci INTEGER DEFAULT 0,
+            arngrsa  INTEGER DEFAULT 0,
+            arncong  INTEGER DEFAULT 0,
+            conglom  INTEGER DEFAULT 0,
+            mudstone INTEGER DEFAULT 0,
+            wacstone INTEGER DEFAULT 0,
+            pacstone INTEGER DEFAULT 0,
+            grastone INTEGER DEFAULT 0,
+            evaptas  INTEGER DEFAULT 0,
+            rocavolc INTEGER DEFAULT 0
         )
     ''')
+    # Add lito columns to existing DBs that lack them
+    _LITO_COLS = ['arcilita','limoarci','arngrsa','arncong','conglom','mudstone','wacstone','pacstone','grastone','evaptas','rocavolc']
+    for col in _LITO_COLS:
+        try:
+            con.execute(f'ALTER TABLE las_data ADD COLUMN {col} INTEGER DEFAULT 0')
+        except Exception:
+            pass
     con.commit()
     con.close()
+
+
+_LITO_KEYS = ['arcilita','limoarci','arngrsa','arncong','conglom','mudstone','wacstone','pacstone','grastone','evaptas','rocavolc']
+
+def _las_db_load():
+    """Load las_data rows from SQLite."""
+    try:
+        lito_ph = ','.join(_LITO_KEYS)
+        con = sqlite3.connect(DB_PATH)
+        cur = con.execute(f'SELECT depth,gas,rastros,oil_show,gas_show,{lito_ph} FROM las_data ORDER BY depth')
+        rows = []
+        for r in cur.fetchall():
+            row = {'depth': r[0], 'gas': r[1], 'rastros': r[2], 'oil_show': r[3], 'gas_show': r[4]}
+            for i, k in enumerate(_LITO_KEYS):
+                row[k] = r[5 + i]
+            rows.append(row)
+        con.close()
+        return rows
+    except Exception:
+        return []
 
 
 def _las_db_save(rows):
     """Replace all las_data rows with new data."""
     try:
+        lito_ph = ','.join(_LITO_KEYS)
+        lito_q  = ','.join(['?'] * len(_LITO_KEYS))
         con = sqlite3.connect(DB_PATH)
         con.execute('PRAGMA journal_mode=WAL')
         con.execute('DELETE FROM las_data')
         con.executemany(
-            'INSERT INTO las_data (depth,gas,rastros,oil_show,gas_show) VALUES (?,?,?,?,?)',
+            f'INSERT INTO las_data (depth,gas,rastros,oil_show,gas_show,{lito_ph}) VALUES (?,?,?,?,?,{lito_q})',
             [(r['depth'], r.get('gas'), r.get('rastros'), r.get('oil_show', 0), r.get('gas_show', 0))
+             + tuple(r.get(k, 0) for k in _LITO_KEYS)
              for r in rows]
         )
         con.commit()
@@ -87,19 +128,6 @@ def _las_db_save(rows):
         pass
 
 
-def _las_db_load():
-    """Load las_data rows from SQLite."""
-    try:
-        con = sqlite3.connect(DB_PATH)
-        cur = con.execute('SELECT depth,gas,rastros,oil_show,gas_show FROM las_data ORDER BY depth')
-        rows = [
-            {'depth': r[0], 'gas': r[1], 'rastros': r[2], 'oil_show': r[3], 'gas_show': r[4]}
-            for r in cur.fetchall()
-        ]
-        con.close()
-        return rows
-    except Exception:
-        return []
 
 # ── Global state ──────────────────────────────────────────────────────────────
 _lock = threading.Lock()
@@ -389,6 +417,20 @@ def api_log_import():
     col_gas      = request.form.get('col_gas', '').upper()
     col_oil_show = request.form.get('col_oil_show', '').upper()
     col_gas_show = request.form.get('col_gas_show', '').upper()
+    # Lithology columns
+    _lito_cols = {
+        'arcilita': request.form.get('col_arcilita', '').upper(),
+        'limoarci': request.form.get('col_limoarci', '').upper(),
+        'arngrsa':  request.form.get('col_arngrsa',  '').upper(),
+        'arncong':  request.form.get('col_arncong',  '').upper(),
+        'conglom':  request.form.get('col_conglom',  '').upper(),
+        'mudstone': request.form.get('col_mudstone', '').upper(),
+        'wacstone': request.form.get('col_wacstone', '').upper(),
+        'pacstone': request.form.get('col_pacstone', '').upper(),
+        'grastone': request.form.get('col_grastone', '').upper(),
+        'evaptas':  request.form.get('col_evaptas',  '').upper(),
+        'rocavolc': request.form.get('col_rocavolc', '').upper(),
+    }
     if fname.endswith('.las'):
         _, rows = _parse_las(text)
     else:
@@ -397,28 +439,31 @@ def api_log_import():
         return jsonify({'ok': False, 'error': 'Archivo vacío'}), 400
     if not col_depth:
         return jsonify({'ok': False, 'error': 'col_depth requerido'}), 400
+
+    def _to_show(v):
+        if v is None:
+            return 0
+        try:
+            return 1 if float(v) > 0 else 0
+        except (ValueError, TypeError):
+            return 0
+
     mapped = []
     for r in rows:
         d = r.get(col_depth)
         if d is None:
             continue
-        # oil_show / gas_show: accept numeric (>0 = show) or bool
-        def _to_show(v):
-            if v is None:
-                return 0
-            try:
-                return 1 if float(v) > 0 else 0
-            except (ValueError, TypeError):
-                return 0
-
-        mapped.append({
+        row = {
             'depth':    round(float(d), 3),
             'gamma':    _to_float_safe(r.get(col_gamma)) if col_gamma else None,
             'gas':      _to_float_safe(r.get(col_gas))   if col_gas   else None,
             'oil_show': _to_show(r.get(col_oil_show)) if col_oil_show else 0,
             'gas_show': _to_show(r.get(col_gas_show)) if col_gas_show else 0,
             'rastros':  _to_float_safe(r.get(col_oil_show)) if col_oil_show else None,
-        })
+        }
+        for lito_key, lito_col in _lito_cols.items():
+            row[lito_key] = _to_show(r.get(lito_col)) if lito_col else 0
+        mapped.append(row)
     global _las_data
     if not mapped:
         return jsonify({'ok': False, 'error': 'Sin filas válidas'}), 400
