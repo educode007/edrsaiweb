@@ -194,6 +194,7 @@
 let _las   = [];   // [{depth, gas, rastros}]  — from LAS file
 let _rt    = [];   // [{depth, gamma}]          — from real-time EDRsai
 let _rtNow = { hole_depth: null, gamma: null }; // latest RT point
+let _userPanned = false; // true after user manually pans/zooms — prevents auto-reset
 
 let GAS_MAX = 2000;
 const RASTROS_MAX = 4;
@@ -456,7 +457,8 @@ socket.on('connect', () => {
         }
       });
       _rt.sort((a, b) => a.depth - b.depth);
-      if (_rt.length && !_las.length) {
+      // Only auto-fit if user hasn't manually navigated
+      if (!_userPanned && _rt.length && !_las.length) {
         setWindow(Math.floor(_rt[0].depth), Math.ceil(_rt[_rt.length-1].depth));
       }
       drawAll();
@@ -525,6 +527,7 @@ chartsDiv.addEventListener('mouseleave', () => {
 // ── Zoom con rueda ────────────────────────────────────────────────────────────
 chartsDiv.addEventListener('wheel', e => {
   e.preventDefault();
+  _userPanned = true;
   const rect   = chartsDiv.getBoundingClientRect();
   const xRatio = (e.clientX - rect.left) / chartsDiv.clientWidth;
   const { from, to } = getWindow();
@@ -536,10 +539,12 @@ chartsDiv.addEventListener('wheel', e => {
   drawAll();
 }, { passive: false });
 
-// ── Pan con drag ──────────────────────────────────────────────────────────────
+// ── Pan con drag (boton izquierdo o derecho) ──────────────────────────────────
 let _drag = null;
+chartsDiv.addEventListener('contextmenu', e => e.preventDefault());
 chartsDiv.addEventListener('mousedown', e => {
-  if (e.button !== 0) return;
+  if (e.button !== 0 && e.button !== 2) return;
+  _userPanned = true;
   const { from, to } = getWindow();
   _drag = { startX: e.clientX, from, to, range: to - from };
   chartsDiv.style.cursor = 'grabbing'; e.preventDefault();
@@ -551,7 +556,7 @@ window.addEventListener('mousemove', e => {
   setWindow(_drag.from + dDepth, _drag.to + dDepth);
   drawAll();
 });
-window.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', e => {
   if (_drag) { _drag = null; chartsDiv.style.cursor = 'crosshair'; }
 });
 
