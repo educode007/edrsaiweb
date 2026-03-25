@@ -465,10 +465,11 @@ def add_web_cors_headers(resp):
     resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return resp
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ── Startup (runs under both Gunicorn and direct execution) ───────────────────
+_db_init()
+threading.Thread(target=_broadcaster, daemon=True).start()
+
+# ── Main (direct execution only) ──────────────────────────────────────────────
 if __name__ == '__main__':
-    _db_init()
-    t = threading.Thread(target=_broadcaster, daemon=True)
-    t.start()
     port_env = os.environ.get('PORT') or os.environ.get('EDR_PORT', '5051')
     socketio.run(app, host='0.0.0.0', port=int(port_env), debug=False, allow_unsafe_werkzeug=True)
