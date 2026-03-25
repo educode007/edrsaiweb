@@ -196,7 +196,7 @@ let _rt    = [];   // [{depth, gamma}]          — from real-time EDRsai
 let _rtNow = { hole_depth: null, gamma: null }; // latest RT point
 let _userPanned = false; // true after user manually pans/zooms — prevents auto-reset
 
-let GAS_MAX = 2000;
+let GAS_MAX = 35000;
 const RASTROS_MAX = 4;
 const RASTROS_COLORS = ['#1e2129','#5a2a04','#c8820a','#e8a020','#ffe040'];
 
@@ -637,9 +637,6 @@ async function doImport() {
     // Server already stored data — just load it back from server to stay in sync
     _las = data.rows;
     _las.sort((a, b) => a.depth - b.depth);
-    // update GAS_MAX
-    const mx = Math.max(..._las.filter(p => p.gas != null).map(p => p.gas), 0);
-    if (mx > 0) GAS_MAX = Math.ceil(mx / 500) * 500;
     msg.textContent = `✓ ${data.inserted} filas guardadas`; msg.style.color = '#50d090';
     fitAll();
     setTimeout(closeImport, 800);
@@ -656,8 +653,6 @@ async function loadPersistedLas() {
     if (data.ok && data.rows.length) {
       _las = data.rows;
       _las.sort((a, b) => a.depth - b.depth);
-      const mx = Math.max(..._las.filter(p => p.gas != null).map(p => p.gas), 0);
-      if (mx > 0) GAS_MAX = Math.ceil(mx / 500) * 500;
       // Fit window to data range and redraw
       fitAll();
       document.getElementById('statusBar').textContent =

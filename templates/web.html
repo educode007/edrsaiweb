@@ -855,7 +855,8 @@
       const yPx = ev.clientY - rect.top;
       const ratio = Math.max(0, Math.min(1, (yPx - gammaViewport.pad.top) / gammaViewport.ph));
       const anchor = gammaViewport.d0 + ratio * span;
-      const zoomFactor = ev.deltaY > 0 ? 1.15 : 0.85;
+      const ticks = Math.sign(ev.deltaY) * Math.min(1, Math.abs(ev.deltaY) / 100);
+      const zoomFactor = Math.pow(1.08, ticks);   // 8% per tick, symmetric
       let newSpan = span * zoomFactor;
 
       const maxSpan = Math.max(1, bounds.max - bounds.min);
