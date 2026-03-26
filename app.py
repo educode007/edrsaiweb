@@ -364,6 +364,22 @@ def api_ingest_bulk():
     return jsonify({'ok': True, 'inserted': inserted})
 
 
+@app.route('/api/ingest/clear', methods=['POST'])
+def api_ingest_clear():
+    """Clear all gamma history — called by EDRsai before sending fresh backfill."""
+    data = request.get_json(force=True) or {}
+    if data.get('api_key') != 'edrsai2026':
+        return jsonify({'ok': False, 'error': 'Unauthorized'}), 403
+    try:
+        con = sqlite3.connect(DB_PATH)
+        con.execute('DELETE FROM log')
+        con.commit()
+        con.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
 @app.route('/log')
 @login_required
 def log_page():
