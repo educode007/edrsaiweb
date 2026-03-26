@@ -233,7 +233,7 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    return render_template('web.html', role=session.get('role', 'viewer'))
+    return redirect(url_for('log_page'))
 
 @app.route('/web')
 @login_required
