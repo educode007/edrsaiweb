@@ -105,44 +105,10 @@
       display: flex; align-items: center; padding-left: 8px;
       font-size: 10px; color: #3a6a3a; font-style: italic;
     }
-    #litoExpandBtn {
-      background: #1a2a1a; border: none; color: #80c080; font-size: 10px; font-weight: 700;
-      cursor: pointer; height: 22px; padding: 0 8px; border-left: 1px solid #2a3a2a; flex-shrink: 0;
-    }
-    #litoExpandBtn:hover { background: #223322; }
-    /* ── Lito expand overlay ── */
-    #litoOverlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-      z-index: 300; flex-direction: column;
-    }
-    #litoOverlay.open { display: flex; }
-    #litoOverlayInner {
-      display: flex; flex-direction: column; flex: 1; margin: 30px; background: #0e1410;
-      border: 1px solid #3a5a3a; border-radius: 6px; overflow: hidden;
-    }
-    #litoOverlayHeader {
-      display: flex; align-items: center; background: #151e15; border-bottom: 1px solid #2a3a2a;
-      height: 32px; flex-shrink: 0; padding: 0 10px; gap: 10px;
-    }
-    #litoOverlayHeader span { color: #80c080; font-size: 11px; font-weight: 700; flex: 1; }
-    #litoOverlayClose {
-      background: #3a1a1a; border: none; color: #ff8080; font-size: 12px; font-weight: 700;
-      cursor: pointer; padding: 3px 10px; border-radius: 4px;
-    }
-    #litoOverlayBody { display: flex; flex: 1; overflow: hidden; }
-    #litoOverlayLabels {
-      width: 110px; flex-shrink: 0; background: #14201a; border-right: 2px solid #2e3340;
-      display: flex; flex-direction: column;
-    }
-    #litoOverlayCharts { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .track-lito-ov {
-      flex: 1; position: relative; border-bottom: 1px solid #2a3a2a; overflow: hidden; min-height: 40px;
-    }
-    .track-lito-ov canvas { position: absolute; inset: 0; }
-    #litoPanelInner { display: flex; flex: 1; overflow-y: auto; min-height: 0; }
+    #litoPanelInner { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     #labelsLito {
       width: 110px; flex-shrink: 0; background: #14201a; border-right: 2px solid #2e3340;
-      display: flex; flex-direction: column;
+      display: flex; flex-direction: column; overflow-y: hidden;
     }
     .track-lbl-lito {
       height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
@@ -151,7 +117,9 @@
       color: #b8ccee; font-size: 10px; font-weight: 700;
     }
     .track-lbl-lito span { font-size: 8px; color: #4a6040; font-weight: 400; }
-    #chartsLito { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #chartsLito {
+      flex: 1; display: flex; flex-direction: column; overflow-y: auto;
+    }
     .track-lito {
       height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
       position: relative; border-bottom: 1px solid #2a3a2a; overflow: hidden;
@@ -248,7 +216,6 @@
       <div id="litoToggleRow">
         <button id="litoToggleBtn" onclick="toggleLito()">&#9660; Litología</button>
         <div id="litoToggleLine">11 pistas sedimentológicas</div>
-        <button id="litoExpandBtn" onclick="openLitoOverlay()">&#8599; Ver todo</button>
       </div>
       <div id="litoPanelInner">
         <div id="labelsLito">
@@ -280,44 +247,6 @@
       </div>
     </div>
 
-  </div>
-</div>
-
-<!-- Lito expand overlay -->
-<div id="litoOverlay">
-  <div id="litoOverlayInner">
-    <div id="litoOverlayHeader">
-      <span>&#9632; Litología — 11 tracks completos</span>
-      <button id="litoOverlayClose" onclick="closeLitoOverlay()">&#10005; Cerrar</button>
-    </div>
-    <div id="litoOverlayBody">
-      <div id="litoOverlayLabels">
-        <div class="track-lbl-lito" style="background:#1a1510">Arcilita<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#1c1a10">LimoArci<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#1e1c0e">ArnGrsa<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#1c1a0c">ArnCong<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#1e1208">Conglom<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#0e1420">Mudstone<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#0c1a24">WacStone<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#0c1e22">PacStone<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#0e1e16">GraStone<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#1a0e1e">Evaptas<span>LAS</span></div>
-        <div class="track-lbl-lito" style="background:#1e0e0e">RocaVolc<span>LAS</span></div>
-      </div>
-      <div id="litoOverlayCharts">
-        <div class="track-lito-ov" id="tLitoArcOv"      style="background:#1a1510"><canvas id="cvLitoArcOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoLimoArciOv" style="background:#1c1a10"><canvas id="cvLitoLimoArciOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoArnGrsaOv"  style="background:#1e1c0e"><canvas id="cvLitoArnGrsaOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoArnCongOv"  style="background:#1c1a0c"><canvas id="cvLitoArnCongOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoConglomOv"  style="background:#1e1208"><canvas id="cvLitoConglomOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoMudOv"      style="background:#0e1420"><canvas id="cvLitoMudOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoWacOv"      style="background:#0c1a24"><canvas id="cvLitoWacOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoPacOv"      style="background:#0c1e22"><canvas id="cvLitoPacOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoGraOv"      style="background:#0e1e16"><canvas id="cvLitoGraOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoEvaOv"      style="background:#1a0e1e"><canvas id="cvLitoEvaOv"></canvas></div>
-        <div class="track-lito-ov" id="tLitoVolcOv"     style="background:#1e0e0e"><canvas id="cvLitoVolcOv"></canvas></div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -400,8 +329,7 @@ const cvs = {
   rastros: document.getElementById('cvRastros'),
 };
 LITO_TRACKS.forEach(t => {
-  cvs[t.id]       = document.getElementById('cv' + t.id);
-  cvs[t.id + 'Ov'] = document.getElementById('cv' + t.id + 'Ov');
+  cvs[t.id] = document.getElementById('cv' + t.id);
 });
 
 // ── Window helpers ────────────────────────────────────────────────────────────
@@ -435,9 +363,6 @@ function resizeAll() {
     const wrap = document.getElementById('t' + t.id);
     const c    = cvs[t.id];
     if (wrap && c) { c.width = wrap.clientWidth; c.height = wrap.clientHeight; }
-    const wrapOv = document.getElementById('t' + t.id + 'Ov');
-    const cOv    = cvs[t.id + 'Ov'];
-    if (wrapOv && cOv) { cOv.width = wrapOv.clientWidth; cOv.height = wrapOv.clientHeight; }
   });
   drawAll();
 }
@@ -453,14 +378,10 @@ function toggleLito() {
   btn.textContent = _litoOpen ? '\u25BC Litolog\u00eda' : '\u25B6 Litolog\u00eda';
   setTimeout(resizeAll, 220);
 }
-function openLitoOverlay() {
-  document.getElementById('litoOverlay').classList.add('open');
-  setTimeout(resizeAll, 50);
-}
-function closeLitoOverlay() {
-  document.getElementById('litoOverlay').classList.remove('open');
-  setTimeout(resizeAll, 50);
-}
+// Sync labelsLito scroll with chartsLito scroll
+document.getElementById('chartsLito').addEventListener('scroll', function() {
+  document.getElementById('labelsLito').scrollTop = this.scrollTop;
+});
 
 // ── Grid helpers ──────────────────────────────────────────────────────────────
 function drawDepthGrid(ctx, W, H, from, to) {
@@ -659,10 +580,13 @@ function updateNowLine() {
 }
 
 // ── Draw Litología tracks ────────────────────────────────────────────────────
-function _drawLitoCanvas(c, trackCfg, from, to) {
-  if (!c || c.width === 0) return;
+function drawLitoTrack(trackCfg) {
+  const c = cvs[trackCfg.id];
+  if (!c) return;
   const ctx = c.getContext('2d');
   const W = c.width, H = c.height;
+  const { from, to } = getWindow();
+  // Clear with full transparency so CSS geo background shows through
   ctx.clearRect(0, 0, W, H);
   drawDepthGrid(ctx, W, H, from, to);
 
@@ -688,11 +612,7 @@ function drawAll() {
   drawGamma();
   drawGas();
   drawRastros();
-  const { from, to } = getWindow();
-  LITO_TRACKS.forEach(t => {
-    _drawLitoCanvas(cvs[t.id],       t, from, to);
-    _drawLitoCanvas(cvs[t.id + 'Ov'], t, from, to);
-  });
+  LITO_TRACKS.forEach(t => drawLitoTrack(t));
   updateNowLine();
   updateStatus();
 }
