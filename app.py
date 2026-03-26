@@ -249,11 +249,27 @@ def api_web_state():
 
 @app.route('/api/web/history')
 def api_web_history():
-    """Last N samples — served from in-memory history (survives page refresh)."""
-    limit = int(request.args.get('limit', 1200))
-    with _lock:
-        rows = list(_history[-limit:])
-    return jsonify(rows)
+    """Gamma history from SQLite DB — survives server restarts."""
+    limit = int(request.args.get('limit', 5000))
+    try:
+        con = sqlite3.connect(DB_PATH)
+        cur = con.execute(
+            'SELECT hole_depth, gamma, gamma_depth FROM log '
+            'WHERE gamma IS NOT NULL '
+            'ORDER BY id DESC LIMIT ?', (limit,)
+        )
+        rows = []
+        for r in cur.fetchall():
+            rows.append({
+                'hole_depth':  r[0],
+                'gamma':       r[1],
+                'gamma_depth': r[2],
+            })
+        con.close()
+        rows.reverse()  # oldest first
+        return jsonify(rows)
+    except Exception as e:
+        return jsonify([])
 
 @app.route('/api/ingest', methods=['POST'])
 def api_ingest():
@@ -283,22 +299,33 @@ def api_ingest():
         if len(_history) > HISTORY_MAX:
             del _history[:-HISTORY_MAX]
 
-        # Also persist to DB when gamma is available
+        # Persist to DB when gamma arrives — deduplicate by gamma_depth
         if _latest.get('gamma') is not None:
+            gd_new = _latest.get('gamma_depth') or _latest.get('hole_depth')
             try:
                 con = sqlite3.connect(DB_PATH)
-                con.execute('''
-                    INSERT INTO log (ts, hole_depth, gamma, gamma_depth, incl, azim)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    _latest['ts'],
-                    _latest.get('hole_depth'),
-                    _latest.get('gamma'),
-                    _latest.get('gamma_depth'),
-                    _latest.get('incl'),
-                    _latest.get('azim')
-                ))
-                con.commit()
+                # Check if this gamma_depth already exists
+                if gd_new is not None:
+                    cur = con.execute(
+                        'SELECT COUNT(*) FROM log WHERE ABS(gamma_depth - ?) < 0.01',
+                        (gd_new,)
+                    )
+                    already = cur.fetchone()[0] > 0
+                else:
+                    already = False
+                if not already:
+                    con.execute('''
+                        INSERT INTO log (ts, hole_depth, gamma, gamma_depth, incl, azim)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (
+                        _latest['ts'],
+                        _latest.get('hole_depth'),
+                        _latest.get('gamma'),
+                        gd_new,
+                        _latest.get('incl'),
+                        _latest.get('azim')
+                    ))
+                    con.commit()
                 con.close()
             except Exception:
                 pass

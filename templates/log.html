@@ -644,10 +644,11 @@ const badge  = document.getElementById('rtBadge');
 socket.on('connect', () => {
   badge.textContent = '● Conectado';
   badge.className   = 'live';
-  // Load historical gamma on connect
-  fetch('/api/web/history?limit=2000')
+  // Load full gamma history from DB on every connect/reconnect
+  fetch('/api/web/history?limit=5000')
     .then(r => r.json())
     .then(rows => {
+      _rt = [];  // reset before reload to avoid duplicates
       rows.forEach(row => {
         const d = row.gamma_depth ?? row.hole_depth;
         if (d != null && row.gamma != null) {
@@ -655,12 +656,15 @@ socket.on('connect', () => {
         }
       });
       _rt.sort((a, b) => a.depth - b.depth);
-      // Only auto-fit if user hasn't manually navigated
-      if (!_userPanned && _rt.length && !_las.length) {
-        setWindow(Math.floor(_rt[0].depth), Math.ceil(_rt[_rt.length-1].depth));
+      // Auto-fit to full gamma range if user hasn't manually navigated
+      if (!_userPanned && _rt.length) {
+        const minD = Math.floor(_rt[0].depth);
+        const maxD = Math.ceil(_rt[_rt.length - 1].depth);
+        setWindow(minD, Math.max(maxD, minD + 10));
       }
       drawAll();
-    });
+    })
+    .catch(() => drawAll());
 });
 
 socket.on('disconnect', () => {
