@@ -302,7 +302,7 @@ let _rt    = [];   // [{depth, gamma}]          — from real-time EDRsai
 let _rtNow = { hole_depth: null, gamma: null }; // latest RT point
 let _userPanned = false; // true after user manually pans/zooms — prevents auto-reset
 
-let GAS_MAX = 60000;
+let GAS_MAX = 60000;  // fallback; se recalcula automáticamente en drawGas()
 const RASTROS_MAX = 4;
 const RASTROS_COLORS = ['#1e2129','#5a3a00','#c87800','#f0b820','#ffe060'];
 
@@ -457,6 +457,20 @@ function drawGamma() {
   }
 }
 
+// ── Auto-scale helper ─────────────────────────────────────────────────────────
+function niceMax(rawMax) {
+  if (!rawMax || rawMax <= 0) return 100;
+  const mag  = Math.pow(10, Math.floor(Math.log10(rawMax)));
+  const frac = rawMax / mag;
+  let nice;
+  if      (frac <= 1)  nice = 1;
+  else if (frac <= 2)  nice = 2;
+  else if (frac <= 2.5) nice = 2.5;
+  else if (frac <= 5)  nice = 5;
+  else                 nice = 10;
+  return nice * mag;
+}
+
 // ── Draw Gas Total (LAS) ──────────────────────────────────────────────────────
 function drawGas() {
   const c = cvs.gas, ctx = c.getContext('2d');
@@ -466,18 +480,26 @@ function drawGas() {
   ctx.fillStyle = '#0f1520'; ctx.fillRect(0, 0, W, H);
   drawDepthGrid(ctx, W, H, from, to);
 
+  const pts = _las.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p.gas != null);
+
+  // Auto-scale: use max of visible window; fallback to full dataset; minimum 100
+  const visMax  = pts.length  ? Math.max(...pts.map(p => p.gas))  : 0;
+  const fullMax = _las.length ? Math.max(..._las.map(p => p.gas ?? 0)) : 0;
+  const autoMax = niceMax(Math.max(visMax, 1));
+  GAS_MAX = autoMax;
+
   ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'left';
-  const steps = [0, Math.round(GAS_MAX/4), Math.round(GAS_MAX/2), Math.round(GAS_MAX*3/4), GAS_MAX];
+  const steps = [0, GAS_MAX * 0.25, GAS_MAX * 0.5, GAS_MAX * 0.75, GAS_MAX];
   steps.forEach(v => {
     const y = H - (v / GAS_MAX) * H;
     ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    ctx.fillText(v, 2, y - 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText(v >= 1000 ? (v/1000).toFixed(v%1000===0?0:1)+'k' : Math.round(v), 2, y - 2);
   });
   ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.textAlign = 'right';
   ctx.fillText('PPM', W - 2, 12);
 
-  const pts = _las.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p.gas != null);
   if (pts.length >= 2) {
     ctx.beginPath();
     ctx.moveTo(dToX(pts[0].depth, W, from, to), H);
