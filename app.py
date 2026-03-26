@@ -332,6 +332,44 @@ def api_ingest():
     
     return jsonify({'ok': True})
 
+@app.route('/api/ingest/bulk', methods=['POST'])
+def api_ingest_bulk():
+    """Receive full gamma history from EDRsai — upsert by gamma_depth."""
+    rows = request.get_json(force=True) or []
+    if not isinstance(rows, list):
+        return jsonify({'ok': False, 'error': 'Expected array'}), 400
+    inserted = 0
+    try:
+        con = sqlite3.connect(DB_PATH)
+        con.execute('PRAGMA journal_mode=WAL')
+        for row in rows:
+            gamma = row.get('gamma')
+            if gamma is None:
+                continue
+            gd  = row.get('gamma_depth') or row.get('hole_depth')
+            hd  = row.get('hole_depth')
+            ts  = row.get('ts') or 0
+            incl = row.get('incl')
+            azim = row.get('azim')
+            if gd is None:
+                continue
+            # Upsert: insert only if no record within 0.01 m
+            cur = con.execute(
+                'SELECT COUNT(*) FROM log WHERE ABS(gamma_depth - ?) < 0.01', (gd,)
+            )
+            if cur.fetchone()[0] == 0:
+                con.execute(
+                    'INSERT INTO log (ts, hole_depth, gamma, gamma_depth, incl, azim) VALUES (?,?,?,?,?,?)',
+                    (ts, hd, gamma, gd, incl, azim)
+                )
+                inserted += 1
+        con.commit()
+        con.close()
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    return jsonify({'ok': True, 'inserted': inserted})
+
+
 @app.route('/log')
 @login_required
 def log_page():
