@@ -430,12 +430,18 @@ function drawGamma() {
 
   const pts = _rt.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p.gamma != null);
   if (pts.length >= 2) {
-    ctx.beginPath();
-    ctx.moveTo(dToX(pts[0].depth, W, from, to), H);
-    pts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - Math.min(1, p.gamma / 255) * H));
-    ctx.lineTo(dToX(pts[pts.length-1].depth, W, from, to), H);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(60,180,60,0.35)'; ctx.fill();
+    // Solo dibujar área rellena si el primer punto está dentro de la ventana visible
+    const firstDepth = pts[0].depth;
+    const lastDepth = pts[pts.length-1].depth;
+    if (firstDepth >= from && lastDepth <= to) {
+      ctx.beginPath();
+      ctx.moveTo(dToX(firstDepth, W, from, to), H);
+      pts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - Math.min(1, p.gamma / 255) * H));
+      ctx.lineTo(dToX(lastDepth, W, from, to), H);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(60,180,60,0.35)'; ctx.fill();
+    }
+    // Dibujar línea de curva siempre
     ctx.beginPath();
     pts.forEach((p, i) => {
       const x = dToX(p.depth, W, from, to);
