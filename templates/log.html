@@ -105,10 +105,10 @@
       display: flex; align-items: center; padding-left: 8px;
       font-size: 10px; color: #3a6a3a; font-style: italic;
     }
-    #litoPanelInner { display: flex; flex: 1; overflow-y: auto; min-height: 0; }
+    #litoPanelInner { display: flex; flex: 1; min-height: 0; overflow: hidden; }
     #labelsLito {
       width: 110px; flex-shrink: 0; background: #14201a; border-right: 2px solid #2e3340;
-      display: flex; flex-direction: column;
+      display: flex; flex-direction: column; overflow-y: hidden;
     }
     .track-lbl-lito {
       height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
@@ -118,7 +118,7 @@
     }
     .track-lbl-lito span { font-size: 8px; color: #4a6040; font-weight: 400; }
     #chartsLito {
-      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+      flex: 1; display: flex; flex-direction: column; overflow-y: auto;
     }
     .track-lito {
       height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
@@ -378,6 +378,10 @@ function toggleLito() {
   btn.textContent = _litoOpen ? '\u25BC Litolog\u00eda' : '\u25B6 Litolog\u00eda';
   setTimeout(resizeAll, 220);
 }
+// Sync labelsLito scroll with chartsLito scroll
+document.getElementById('chartsLito').addEventListener('scroll', function() {
+  document.getElementById('labelsLito').scrollTop = this.scrollTop;
+});
 
 // ── Grid helpers ──────────────────────────────────────────────────────────────
 function drawDepthGrid(ctx, W, H, from, to) {
