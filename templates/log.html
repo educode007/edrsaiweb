@@ -126,56 +126,7 @@
     }
     .track-lito canvas { position: absolute; inset: 0; }
 
-    /* ── Mobile: vertical layout (depth top→bottom, tracks side by side) ── */
-  @media (max-width: 768px) {
-    html, body { font-size: 12px; }
-    .hdr { height: 36px; padding: 0 8px; }
-    .nav-link { font-size: 11px; padding: 3px 6px; }
-    #toolbar {
-      gap: 5px; padding: 4px 6px; flex-wrap: wrap;
-    }
-    #toolbar label { display: none; }
-    #toolbar input[type=number] { width: 60px; font-size: 11px; }
-    .btn { padding: 4px 8px; font-size: 11px; }
-    #statusBar { font-size: 10px; padding: 2px 6px; }
-    #rtBadge   { font-size: 10px; padding: 2px 8px; }
-
-    /* Vertical track layout */
-    #wrap { height: calc(100vh - 36px); }
-    #main { flex-direction: column; }
-    #mainTop {
-      flex-direction: column;
-      flex: 1; overflow: hidden;
-    }
-    /* On mobile: depth axis is on the LEFT as a vertical strip */
-    #labelsTop { display: none; }  /* hide sidebar labels on mobile */
-    #charts {
-      flex-direction: row;   /* tracks side by side */
-      overflow: hidden;
-    }
-    /* Depth axis becomes a vertical left strip */
-    #depthAxis {
-      width: 38px; height: 100%;
-      border-right: 1px solid #2e3340;
-      border-bottom: none;
-      flex-shrink: 0;
-    }
-    #depthAxis canvas { width: 38px; }
-    /* Each track becomes a column */
-    .track {
-      flex: 1;
-      border-bottom: none;
-      border-right: 1px solid #1e2330;
-      min-height: unset;
-      min-width: 60px;
-    }
-    /* Hide Gas, Rastros and Lito on mobile — only Gamma matters */
-    #tGas, #tRastros { display: none; }
-    #litoPanel { display: none; }
-    #cursorLine { display: none !important; }
-  }
-
-  /* ── Import modal ── */
+    /* ── Import modal ── */
     #importOverlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
       z-index: 200; align-items: center; justify-content: center;
@@ -381,9 +332,6 @@ LITO_TRACKS.forEach(t => {
   cvs[t.id] = document.getElementById('cv' + t.id);
 });
 
-// ── Mobile detection ─────────────────────────────────────────────────────────
-function isMobile() { return window.innerWidth <= 768; }
-
 // ── Window helpers ────────────────────────────────────────────────────────────
 function getWindow() {
   return {
@@ -398,10 +346,6 @@ function setWindow(from, to) {
 }
 function dToX(depth, W, from, to) {
   return ((depth - from) / (to - from)) * W;
-}
-// Vertical mode: depth maps to Y (top=from, bottom=to)
-function dToY(depth, H, from, to) {
-  return ((depth - from) / (to - from)) * H;
 }
 
 // ── Resize ────────────────────────────────────────────────────────────────────
@@ -433,115 +377,6 @@ function toggleLito() {
   panel.classList.toggle('lito-collapsed', !_litoOpen);
   btn.textContent = _litoOpen ? '\u25BC Litolog\u00eda' : '\u25B6 Litolog\u00eda';
   setTimeout(resizeAll, 220);
-}
-
-// ── Vertical depth axis (mobile) ─────────────────────────────────────────────
-function drawDepthAxisV() {
-  const c = cvs.axis, ctx = c.getContext('2d');
-  const W = c.width, H = c.height;
-  const { from, to } = getWindow();
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#10131a'; ctx.fillRect(0, 0, W, H);
-  const range = to - from;
-  const mag   = Math.pow(10, Math.floor(Math.log10(Math.max(range / 6, 1))));
-  const step  = Math.ceil((range / 6) / mag) * mag || 1;
-  const start = Math.ceil(from / step) * step;
-  ctx.fillStyle = '#6080a0'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'right';
-  ctx.strokeStyle = '#2a3550'; ctx.lineWidth = 1;
-  for (let d = start; d <= to + 0.01; d += step) {
-    const y = Math.round(dToY(d, H, from, to));
-    ctx.beginPath(); ctx.moveTo(W - 3, y); ctx.lineTo(W, y); ctx.stroke();
-    ctx.fillText(d.toFixed(0), W - 4, y - 2);
-  }
-  // border right
-  ctx.strokeStyle = '#2e3340'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(W - 0.5, 0); ctx.lineTo(W - 0.5, H); ctx.stroke();
-}
-
-// ── Vertical grid lines (horizontal lines across track in vertical mode) ──────
-function drawDepthGridV(ctx, W, H, from, to) {
-  const range = to - from;
-  const mag   = Math.pow(10, Math.floor(Math.log10(Math.max(range / 6, 1))));
-  const step  = Math.ceil((range / 6) / mag) * mag || 1;
-  const start = Math.ceil(from / step) * step;
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-  for (let d = start; d <= to + 0.01; d += step) {
-    const y = Math.round(dToY(d, H, from, to));
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
-}
-
-// ── Vertical Gamma draw (mobile) ──────────────────────────────────────────────
-function drawGammaV() {
-  const c = cvs.gamma, ctx = c.getContext('2d');
-  const W = c.width, H = c.height;
-  const { from, to } = getWindow();
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#111520'; ctx.fillRect(0, 0, W, H);
-  drawDepthGridV(ctx, W, H, from, to);
-
-  // X axis labels (0,64,128,192,255 API)
-  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '8px Segoe UI'; ctx.textAlign = 'center';
-  [0, 128, 255].forEach(v => {
-    const x = (v / 255) * W;
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-    ctx.fillText(v, x, H - 2);
-  });
-  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.textAlign = 'left';
-  ctx.fillText('API', 2, 10);
-
-  const pts = _rt.filter(p => p.depth >= from - 0.5 && p.depth <= to + 0.5 && p.gamma != null);
-  if (pts.length >= 2) {
-    // filled area
-    ctx.beginPath();
-    ctx.moveTo(0, dToY(pts[0].depth, H, from, to));
-    pts.forEach(p => ctx.lineTo(Math.min(1, p.gamma / 255) * W, dToY(p.depth, H, from, to)));
-    ctx.lineTo(0, dToY(pts[pts.length-1].depth, H, from, to));
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(60,180,60,0.35)'; ctx.fill();
-    // line
-    ctx.beginPath();
-    pts.forEach((p, i) => {
-      const x = Math.min(1, p.gamma / 255) * W;
-      const y = dToY(p.depth, H, from, to);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = '#70e878'; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-
-  // RT now dot
-  if (_rtNow.gamma != null && _rtNow.hole_depth != null) {
-    const x = Math.min(1, _rtNow.gamma / 255) * W;
-    const y = dToY(_rtNow.hole_depth, H, from, to);
-    if (y >= 0 && y <= H) {
-      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = '#90ffb0'; ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
-    }
-  }
-
-  // Track label
-  ctx.fillStyle = 'rgba(80,200,80,0.85)'; ctx.font = 'bold 10px Segoe UI'; ctx.textAlign = 'center';
-  ctx.fillText('GR', W / 2, 14);
-}
-
-// ── drawAll dispatcher ────────────────────────────────────────────────────────
-function drawAll() {
-  if (isMobile()) {
-    drawDepthAxisV();
-    drawGammaV();
-    updateNowLine();
-    updateStatus();
-  } else {
-    drawDepthAxis();
-    drawGamma();
-    drawGas();
-    drawRastros();
-    LITO_TRACKS.forEach(t => drawLitoTrack(t));
-    updateNowLine();
-    updateStatus();
-  }
 }
 
 // ── Grid helpers ──────────────────────────────────────────────────────────────
@@ -728,30 +563,16 @@ function drawRastros() {
   });
 }
 
-// ── "Now" line across all tracks ───────────────────────────────────────────────────────
+// ── "Now" vertical line across all tracks ─────────────────────────────────────
 function updateNowLine() {
   const nowLine = document.getElementById('nowLine');
   if (_rtNow.hole_depth == null) { nowLine.style.display = 'none'; return; }
   const { from, to } = getWindow();
-  if (isMobile()) {
-    const H = document.getElementById('charts').clientHeight;
-    const y = dToY(_rtNow.hole_depth, H, from, to);
-    if (y < 0 || y > H) { nowLine.style.display = 'none'; return; }
-    nowLine.style.top    = y + 'px';
-    nowLine.style.left   = '0';
-    nowLine.style.width  = '100%';
-    nowLine.style.height = '2px';
-    nowLine.style.display = 'block';
-  } else {
-    const W = document.getElementById('charts').clientWidth;
-    const x = dToX(_rtNow.hole_depth, W, from, to);
-    if (x < 0 || x > W) { nowLine.style.display = 'none'; return; }
-    nowLine.style.left   = x + 'px';
-    nowLine.style.top    = '0';
-    nowLine.style.width  = '2px';
-    nowLine.style.height = '100%';
-    nowLine.style.display = 'block';
-  }
+  const W = document.getElementById('charts').clientWidth;
+  const x = dToX(_rtNow.hole_depth, W, from, to);
+  if (x < 0 || x > W) { nowLine.style.display = 'none'; return; }
+  nowLine.style.left    = x + 'px';
+  nowLine.style.display = 'block';
 }
 
 // ── Draw Litología tracks ────────────────────────────────────────────────────
@@ -781,6 +602,16 @@ function drawLitoTrack(trackCfg) {
   ctx.globalAlpha = 1;
 }
 
+// ── Draw all ──────────────────────────────────────────────────────────────────
+function drawAll() {
+  drawDepthAxis();
+  drawGamma();
+  drawGas();
+  drawRastros();
+  LITO_TRACKS.forEach(t => drawLitoTrack(t));
+  updateNowLine();
+  updateStatus();
+}
 
 function updateStatus() {
   const sb = document.getElementById('statusBar');
@@ -899,102 +730,39 @@ chartsDiv.addEventListener('mouseleave', () => {
 chartsDiv.addEventListener('wheel', e => {
   e.preventDefault();
   _userPanned = true;
+  const rect   = chartsDiv.getBoundingClientRect();
+  const xRatio = (e.clientX - rect.left) / chartsDiv.clientWidth;
   const { from, to } = getWindow();
   const range  = to - from;
+  // Normalize delta: cap at 1 tick regardless of wheel speed/device
   const ticks  = Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY) / 100);
-  const factor = Math.pow(1.08, ticks);
+  const factor = Math.pow(1.08, ticks);   // 8% per tick, symmetric in/out
   const newRange = Math.max(5, range * factor);
-  if (isMobile()) {
-    const rect   = chartsDiv.getBoundingClientRect();
-    const yRatio = (e.clientY - rect.top) / chartsDiv.clientHeight;
-    const pivot  = from + yRatio * range;
-    setWindow(pivot - yRatio * newRange, pivot + (1 - yRatio) * newRange);
-  } else {
-    const rect   = chartsDiv.getBoundingClientRect();
-    const xRatio = (e.clientX - rect.left) / chartsDiv.clientWidth;
-    const pivot  = from + xRatio * range;
-    setWindow(pivot - xRatio * newRange, pivot + (1 - xRatio) * newRange);
-  }
+  const pivot  = from + xRatio * range;
+  setWindow(pivot - xRatio * newRange, pivot + (1 - xRatio) * newRange);
   drawAll();
 }, { passive: false });
 
-// ── Pan con drag (mouse) ───────────────────────────────────────────────────────
+// ── Pan con drag (boton izquierdo o derecho) ──────────────────────────────────
 let _drag = null;
 chartsDiv.addEventListener('contextmenu', e => e.preventDefault());
 chartsDiv.addEventListener('mousedown', e => {
   if (e.button !== 0 && e.button !== 2) return;
   _userPanned = true;
   const { from, to } = getWindow();
-  _drag = { startX: e.clientX, startY: e.clientY, from, to, range: to - from };
+  _drag = { startX: e.clientX, from, to, range: to - from };
   chartsDiv.style.cursor = 'grabbing'; e.preventDefault();
 });
 window.addEventListener('mousemove', e => {
   if (!_drag) return;
-  const { from, to } = _drag;
-  const range = _drag.range;
-  if (isMobile()) {
-    const dyPx   = e.clientY - _drag.startY;
-    const dDepth = -(dyPx / chartsDiv.clientHeight) * range;
-    setWindow(from + dDepth, to + dDepth);
-  } else {
-    const dxPx   = e.clientX - _drag.startX;
-    const dDepth = -(dxPx / chartsDiv.clientWidth) * range;
-    setWindow(from + dDepth, to + dDepth);
-  }
+  const dxPx   = e.clientX - _drag.startX;
+  const dDepth = -(dxPx / chartsDiv.clientWidth) * _drag.range;
+  setWindow(_drag.from + dDepth, _drag.to + dDepth);
   drawAll();
 });
-window.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', e => {
   if (_drag) { _drag = null; chartsDiv.style.cursor = 'crosshair'; }
 });
-
-// ── Touch: swipe (pan) + pinch (zoom) ─────────────────────────────────────────
-let _touch = null;
-chartsDiv.addEventListener('touchstart', e => {
-  _userPanned = true;
-  const { from, to } = getWindow();
-  if (e.touches.length === 1) {
-    _touch = { type: 'pan', startY: e.touches[0].clientY, startX: e.touches[0].clientX, from, to, range: to - from };
-  } else if (e.touches.length === 2) {
-    const dy = Math.abs(e.touches[0].clientY - e.touches[1].clientY);
-    const dx = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
-    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const rect  = chartsDiv.getBoundingClientRect();
-    _touch = { type: 'pinch', dist: isMobile() ? dy : dx, from, to, range: to - from,
-               midRatio: isMobile() ? (midY - rect.top) / chartsDiv.clientHeight
-                                    : (midX - rect.left) / chartsDiv.clientWidth };
-  }
-  e.preventDefault();
-}, { passive: false });
-
-chartsDiv.addEventListener('touchmove', e => {
-  if (!_touch) return;
-  e.preventDefault();
-  if (_touch.type === 'pan' && e.touches.length === 1) {
-    if (isMobile()) {
-      const dyPx   = e.touches[0].clientY - _touch.startY;
-      const dDepth = -(dyPx / chartsDiv.clientHeight) * _touch.range;
-      setWindow(_touch.from + dDepth, _touch.to + dDepth);
-    } else {
-      const dxPx   = e.touches[0].clientX - _touch.startX;
-      const dDepth = -(dxPx / chartsDiv.clientWidth) * _touch.range;
-      setWindow(_touch.from + dDepth, _touch.to + dDepth);
-    }
-    drawAll();
-  } else if (_touch.type === 'pinch' && e.touches.length === 2) {
-    const dy   = Math.abs(e.touches[0].clientY - e.touches[1].clientY);
-    const dx   = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
-    const dist = isMobile() ? dy : dx;
-    if (dist < 1) return;
-    const factor   = _touch.dist / dist;
-    const newRange = Math.max(5, _touch.range * factor);
-    const pivot    = _touch.from + _touch.midRatio * _touch.range;
-    setWindow(pivot - _touch.midRatio * newRange, pivot + (1 - _touch.midRatio) * newRange);
-    drawAll();
-  }
-}, { passive: false });
-
-chartsDiv.addEventListener('touchend', () => { _touch = null; }, { passive: true });
 
 // ── Import modal ──────────────────────────────────────────────────────────────
 let _impFile = null;
