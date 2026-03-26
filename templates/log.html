@@ -118,7 +118,7 @@
     }
     .track-lbl-lito span { font-size: 8px; color: #4a6040; font-weight: 400; }
     #chartsLito {
-      flex: 1; display: flex; flex-direction: column; overflow-y: auto;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
     }
     .track-lito {
       height: 40px; min-height: 40px; max-height: 40px; flex-shrink: 0;
@@ -378,10 +378,6 @@ function toggleLito() {
   btn.textContent = _litoOpen ? '\u25BC Litolog\u00eda' : '\u25B6 Litolog\u00eda';
   setTimeout(resizeAll, 220);
 }
-// Sync labelsLito scroll with chartsLito scroll
-document.getElementById('chartsLito').addEventListener('scroll', function() {
-  document.getElementById('labelsLito').scrollTop = this.scrollTop;
-});
 
 // ── Grid helpers ──────────────────────────────────────────────────────────────
 function drawDepthGrid(ctx, W, H, from, to) {
