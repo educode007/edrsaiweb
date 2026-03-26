@@ -334,7 +334,7 @@ def api_ingest():
 
 @app.route('/api/ingest/bulk', methods=['POST'])
 def api_ingest_bulk():
-    """Receive full gamma history from EDRsai — upsert by gamma_depth."""
+    """Receive full gamma history from EDRsai — replaces all existing gamma data."""
     rows = request.get_json(force=True) or []
     if not isinstance(rows, list):
         return jsonify({'ok': False, 'error': 'Expected array'}), 400
@@ -342,27 +342,21 @@ def api_ingest_bulk():
     try:
         con = sqlite3.connect(DB_PATH)
         con.execute('PRAGMA journal_mode=WAL')
+        con.execute('DELETE FROM log')  # full replace — no mixing of sessions
         for row in rows:
             gamma = row.get('gamma')
             if gamma is None:
                 continue
-            gd  = row.get('gamma_depth') or row.get('hole_depth')
-            hd  = row.get('hole_depth')
-            ts  = row.get('ts') or 0
-            incl = row.get('incl')
-            azim = row.get('azim')
+            gd = row.get('gamma_depth') or row.get('hole_depth')
+            hd = row.get('hole_depth')
+            ts = row.get('ts') or 0
             if gd is None:
                 continue
-            # Upsert: insert only if no record within 0.01 m
-            cur = con.execute(
-                'SELECT COUNT(*) FROM log WHERE ABS(gamma_depth - ?) < 0.01', (gd,)
+            con.execute(
+                'INSERT INTO log (ts, hole_depth, gamma, gamma_depth) VALUES (?,?,?,?)',
+                (ts, hd, gamma, gd)
             )
-            if cur.fetchone()[0] == 0:
-                con.execute(
-                    'INSERT INTO log (ts, hole_depth, gamma, gamma_depth, incl, azim) VALUES (?,?,?,?,?,?)',
-                    (ts, hd, gamma, gd, incl, azim)
-                )
-                inserted += 1
+            inserted += 1
         con.commit()
         con.close()
     except Exception as e:
