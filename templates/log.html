@@ -905,6 +905,7 @@ async function loadPersistedLas() {
 window.addEventListener('load', async () => {
   resizeAll();                  // size canvases first
   await loadPersistedLas();     // then fetch + draw
+  _loadHistory();               // load gamma history immediately, don't wait for socket
 });
 </script>
 </body>
