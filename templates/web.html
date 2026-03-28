@@ -586,7 +586,7 @@
       ctx.moveTo(pad.left, y(gammaTrack[0].depth));
       for (const p of gammaTrack) {
         if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        ctx.lineTo(x(p.gamma), y(p.depth));
+        ctx.lineTo(x(p.gamma * 4.25), y(p.depth));
       }
       ctx.lineTo(pad.left, y(gammaTrack[gammaTrack.length - 1].depth));
       ctx.closePath();
@@ -600,7 +600,7 @@
       let started = false;
       for (const p of gammaTrack) {
         if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        const px = x(p.gamma);
+        const px = x(p.gamma * 4.25);
         const py = y(p.depth);
         if (!started) {
           ctx.moveTo(px, py);

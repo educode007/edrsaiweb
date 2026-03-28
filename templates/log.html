@@ -437,7 +437,7 @@ function drawGamma() {
     if (firstDepth >= from && lastDepth <= to) {
       ctx.beginPath();
       ctx.moveTo(dToX(firstDepth, W, from, to), H);
-      pts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - Math.min(1, p.gamma / 255) * H));
+      pts.forEach(p => ctx.lineTo(dToX(p.depth, W, from, to), H - Math.min(1, (p.gamma * 4.25) / 255) * H));
       ctx.lineTo(dToX(lastDepth, W, from, to), H);
       ctx.closePath();
       ctx.fillStyle = 'rgba(60,180,60,0.35)'; ctx.fill();
@@ -446,7 +446,7 @@ function drawGamma() {
     ctx.beginPath();
     pts.forEach((p, i) => {
       const x = dToX(p.depth, W, from, to);
-      const y = H - Math.min(1, p.gamma / 255) * H;
+      const y = H - Math.min(1, (p.gamma * 4.25) / 255) * H;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.strokeStyle = '#70e878'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -455,7 +455,7 @@ function drawGamma() {
   // RT "now" dot
   if (_rtNow.gamma != null && _rtNow.hole_depth != null) {
     const x = dToX(_rtNow.hole_depth, W, from, to);
-    const y = H - Math.min(1, _rtNow.gamma / 255) * H;
+    const y = H - Math.min(1, (_rtNow.gamma * 4.25) / 255) * H;
     ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#90ffb0'; ctx.fill();
     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
