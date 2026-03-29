@@ -26,7 +26,7 @@
     .page {
       height: calc(100% - 42px);
       display: grid;
-      grid-template-columns: minmax(180px, 22%) 1fr;
+      grid-template-columns: 1fr;
       gap: 8px;
       padding: 8px;
       background: #0e1117;
@@ -165,21 +165,6 @@
   </div>
 
   <div class="page">
-    <section class="card">
-      <div class="card-hdr">
-        <span>Gamma vs Gamma Depth</span>
-        <div class="gamma-tools">
-          <button id="zoomIn" class="gamma-btn" type="button">+</button>
-          <button id="zoomOut" class="gamma-btn" type="button">-</button>
-          <button id="zoomReset" class="gamma-btn" type="button">Reset</button>
-          <span class="gamma-hint">wheel zoom · shift+wheel scroll</span>
-        </div>
-      </div>
-      <div class="chart-wrap">
-        <canvas id="gammaCanvas"></canvas>
-      </div>
-    </section>
-
     <section class="card">
       <div class="card-hdr">
         <span>Compass</span>
