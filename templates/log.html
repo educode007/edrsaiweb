@@ -653,15 +653,10 @@ function _loadHistory() {
     .then(r => r.json())
     .then(rows => {
       _rt = [];
-      const seen = new Set(); // Evitar duplicados
       rows.forEach(row => {
         const d = row.gamma_depth ?? row.hole_depth;
         if (d != null && row.gamma != null) {
-          const key = `${d.toFixed(2)}_${row.gamma.toFixed(2)}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            _rt.push({ depth: d, gamma: row.gamma });
-          }
+          _rt.push({ depth: d, gamma: row.gamma });
         }
       });
       _rt.sort((a, b) => a.depth - b.depth);
