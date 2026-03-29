@@ -211,14 +211,6 @@
       : window.location.origin;
     const backendOrigin = (params.get('backend') || _defaultBackend).replace(/\/$/, '');
 
-    const MAX_GAMMA = 255;  // Valores ya vienen multiplicados x4.25 desde backend
-    const GAMMA_WINDOW_M = 400;
-    const GAMMA_BIN_M = 0.1;
-    const gammaSeries = []; // [{depth, gamma}]
-    const gammaView = { enabled: false, min: null, max: null };
-    let gammaViewport = null;
-    let gammaDrag = null;
-
     let lastGammaTs = null;
     let lastGammaFallbackKey = null;
     let lastCompassPoints = [];
@@ -236,12 +228,7 @@
     const centerMode = document.getElementById('centerMode');
     const centerAz = document.getElementById('centerAz');
     const pointsInfo = document.getElementById('pointsInfo');
-
-    const gammaCanvas = document.getElementById('gammaCanvas');
     const compassCanvas = document.getElementById('compassCanvas');
-    const zoomInBtn = document.getElementById('zoomIn');
-    const zoomOutBtn = document.getElementById('zoomOut');
-    const zoomResetBtn = document.getElementById('zoomReset');
 
     let liveTimer = null;
     let gammaOffset = 15.0;
@@ -370,233 +357,6 @@
       if (mtfa != null) out.push({ az: mtfa, r: 0.55, label: 'mTFA', color: '#e11a1a' });
 
       return out;
-    }
-
-    function addGammaPoint(depth, gamma) {
-      if (depth == null || gamma == null) return;
-      const d = Number(depth);
-      const g = Number(gamma);
-      if (!Number.isFinite(d) || !Number.isFinite(g)) return;
-
-      const last = gammaSeries.length ? gammaSeries[gammaSeries.length - 1] : null;
-      if (last) {
-        // Reset de pozo: profundidad cayó más de 50m respecto al máximo registrado
-        const maxDepth = Math.max(...gammaSeries.map(p => p.depth));
-        if (maxDepth - d > 50) {
-          gammaSeries.splice(0, gammaSeries.length);
-          tfaTrail.splice(0, tfaTrail.length);
-          lastGammaTs = null;
-          lastGammaFallbackKey = null;
-          gammaView.enabled = false;
-        } else {
-          const sameDepth = Math.abs(last.depth - d) < 0.05;
-          const sameGamma = Math.abs(last.gamma - g) < 0.2;
-          if (sameDepth && sameGamma) return;
-        }
-      }
-
-      gammaSeries.push({ depth: d, gamma: g });
-      if (gammaSeries.length > MAX_GAMMA) gammaSeries.splice(0, gammaSeries.length - MAX_GAMMA);
-    }
-
-    function buildGammaTrackPoints(d0, d1) {
-      const bins = new Map();
-      for (const p of gammaSeries) {
-        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        if (p.depth < d0 - 1 || p.depth > d1 + 1) continue;
-        const b = Math.round(p.depth / GAMMA_BIN_M) * GAMMA_BIN_M;
-        bins.set(b, p.gamma);
-      }
-      return Array.from(bins.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([depth, gamma]) => ({ depth, gamma }));
-    }
-
-    function gammaDataBounds() {
-      let minD = Infinity;
-      let maxD = -Infinity;
-      for (const p of gammaSeries) {
-        if (!Number.isFinite(p.depth)) continue;
-        minD = Math.min(minD, p.depth);
-        maxD = Math.max(maxD, p.depth);
-      }
-      if (!Number.isFinite(minD) || !Number.isFinite(maxD)) {
-        return { min: 0, max: 1 };
-      }
-      return { min: Math.min(0, minD), max: Math.max(1, maxD) };
-    }
-
-    function clampGammaView(minV, maxV, bounds) {
-      // Allow panning 200m beyond actual data range so user is never trapped
-      const margin = 200;
-      const hardMin = bounds.min - margin;
-      const hardMax = bounds.max + margin;
-      let min = minV;
-      let max = maxV;
-      const span = Math.max(1, max - min);
-      if (min < hardMin) { max += hardMin - min; min = hardMin; }
-      if (max > hardMax) { min -= max - hardMax; max = hardMax; }
-      return { min, max };
-    }
-
-    function drawGammaChart() {
-      const { ctx, w, h } = fitCanvas(gammaCanvas);
-      ctx.clearRect(0, 0, w, h);
-
-      ctx.fillStyle = '#111520';
-      ctx.fillRect(0, 0, w, h);
-
-      const pad = { top: 30, right: 16, bottom: 38, left: 58 };
-      const pw = w - pad.left - pad.right;
-      const ph = h - pad.top - pad.bottom;
-      if (pw <= 0 || ph <= 0) return;
-
-      if (gammaSeries.length < 2) {
-        ctx.strokeStyle = '#2e3340';
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(pad.left, pad.top, pw, ph);
-        ctx.fillStyle = '#4a6080';
-        ctx.font = '12px Segoe UI';
-        ctx.fillText('Esperando puntos gamma/depth...', pad.left + 10, pad.top + 22);
-        return;
-      }
-
-      let minD = Infinity;
-      let maxD = -Infinity;
-      for (const p of gammaSeries) {
-        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        minD = Math.min(minD, p.depth);
-        maxD = Math.max(maxD, p.depth);
-      }
-      if (!Number.isFinite(minD) || !Number.isFinite(maxD)) return;
-
-      const bounds = gammaDataBounds();
-      const autoMin = bounds.max <= GAMMA_WINDOW_M ? 0 : bounds.max - GAMMA_WINDOW_M;
-      let viewMin = autoMin;
-      let viewMax = autoMin + GAMMA_WINDOW_M;
-      if (gammaView.enabled && Number.isFinite(gammaView.min) && Number.isFinite(gammaView.max) && gammaView.max > gammaView.min) {
-        const clamped = clampGammaView(gammaView.min, gammaView.max, bounds);
-        viewMin = clamped.min;
-        viewMax = clamped.max;
-      }
-
-      let d0 = viewMin;
-      let d1 = viewMax;
-      if (!Number.isFinite(d0) || !Number.isFinite(d1) || d1 <= d0) {
-        d0 = viewMin;
-        d1 = viewMin + 1;
-      }
-      const depthTick = niceStep(d1 - d0, 9);
-
-      const g0 = 0;
-      const g1 = 255;
-
-      const innerTop = 4;
-      const innerBottom = 8;
-      const innerHeight = Math.max(1, ph - innerTop - innerBottom);
-
-      const x = g => pad.left + ((g - g0) / (g1 - g0)) * pw;
-      const y = d => pad.top + innerTop + ((d - d0) / (d1 - d0)) * innerHeight;
-      gammaViewport = { pad, pw, ph, d0, d1 };
-
-      // Track border
-      ctx.strokeStyle = '#2e3340';
-      ctx.lineWidth = 1.4;
-      ctx.strokeRect(pad.left, pad.top, pw, ph);
-
-      // Vertical gamma grid
-      ctx.setLineDash([2, 5]);
-      ctx.strokeStyle = '#1e2840';
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
-        const gx = pad.left + (pw * i / 4);
-        ctx.beginPath();
-        ctx.moveTo(gx, pad.top);
-        ctx.lineTo(gx, pad.top + ph);
-        ctx.stroke();
-      }
-
-      // Horizontal depth grid (adaptive step)
-      const firstTick = Math.ceil(d0 / depthTick) * depthTick;
-      for (let d = firstTick; d <= d1 + depthTick * 0.5; d += depthTick) {
-        const gy = y(d);
-        ctx.beginPath();
-        ctx.moveTo(pad.left, gy);
-        ctx.lineTo(pad.left + pw, gy);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-
-      // Track labels
-      ctx.fillStyle = '#7ec8f7';
-      ctx.font = 'bold 12px Segoe UI';
-      ctx.textAlign = 'center';
-      ctx.fillText('Gamma Ray (API)', pad.left + pw / 2, 16);
-
-      ctx.font = 'bold 11px Segoe UI';
-      ctx.fillStyle = '#5a7090';
-      ctx.textAlign = 'left';
-      ctx.fillText('0', pad.left, pad.top - 8);
-      ctx.textAlign = 'right';
-      ctx.fillText('255', pad.left + pw, pad.top - 8);
-
-      ctx.save();
-      ctx.translate(18, pad.top + ph / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#5a7090';
-      ctx.font = 'bold 12px Segoe UI';
-      ctx.fillText('Gamma Depth (m)', 0, 0);
-      ctx.restore();
-
-      ctx.fillStyle = '#5a7090';
-      ctx.font = '10px Segoe UI';
-      ctx.textAlign = 'right';
-      for (let d = firstTick; d <= d1 + depthTick * 0.5; d += depthTick) {
-        const gy = y(d);
-        ctx.fillText(`${d.toFixed(0)}`, pad.left - 6, gy + 3);
-      }
-
-      const gammaTrack = buildGammaTrackPoints(d0, d1);
-      if (gammaTrack.length < 2) return;
-
-      // Clip to plot area so curve never escapes the box
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(pad.left, pad.top, pw, ph);
-      ctx.clip();
-
-      // Fill under curve
-      ctx.beginPath();
-      ctx.moveTo(pad.left, y(gammaTrack[0].depth));
-      for (const p of gammaTrack) {
-        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        ctx.lineTo(x(p.gamma), y(p.depth));
-      }
-      ctx.lineTo(pad.left, y(gammaTrack[gammaTrack.length - 1].depth));
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.fill();
-
-      // Curve — white
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.7;
-      ctx.beginPath();
-      let started = false;
-      for (const p of gammaTrack) {
-        if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        const px = x(p.gamma);
-        const py = y(p.depth);
-        if (!started) {
-          ctx.moveTo(px, py);
-          started = true;
-        } else {
-          ctx.lineTo(px, py);
-        }
-      }
-      ctx.stroke();
-
-      ctx.restore();
     }
 
     function drawCompass(points, azimNow) {
@@ -748,13 +508,11 @@
         if (gammaTick != null) {
           if (gammaTick !== lastGammaTs) {
             lastGammaTs = gammaTick;
-            addGammaPoint(gammaDepth, gamma);
             gammaVal.textContent = fmt(gamma, 1);
             gammaTime.textContent = nowHms();
           }
         } else if (gammaFallbackKey !== lastGammaFallbackKey) {
           lastGammaFallbackKey = gammaFallbackKey;
-          addGammaPoint(gammaDepth, gamma);
           gammaVal.textContent = fmt(gamma, 1);
           gammaTime.textContent = nowHms();
         }
@@ -762,7 +520,6 @@
 
       lastCompassPoints = trailToCompassPoints();
 
-      drawGammaChart();
       drawCompass(lastCompassPoints, azim);
 
       setLive(true);
@@ -778,16 +535,7 @@
         }
         if (!r || !r.ok) return;
         const rows = await r.json();
-        rows.forEach(row => {
-          if (row.gamma != null) {
-            // Use gamma_depth directly if available (already computed), else calculate
-            const gd = row.gamma_depth != null
-              ? Number(row.gamma_depth)
-              : gammaDepthFromHoleDepth(row.hole_depth != null ? Number(row.hole_depth) : null);
-            if (gd != null && Number.isFinite(gd)) addGammaPoint(gd, Number(row.gamma));
-          }
-        });
-        drawGammaChart();
+        // No need to load history for compass-only view
       } catch (_) {
       }
     }
@@ -809,118 +557,9 @@
     socket.on('web_update', applyData);
 
     window.addEventListener('resize', () => {
-      drawGammaChart();
       drawCompass(lastCompassPoints, Number(azimVal.textContent));
     });
 
-    let _wheelLastT = 0;
-    gammaCanvas.addEventListener('wheel', (ev) => {
-      if (!gammaViewport) return;
-      ev.preventDefault();
-
-      // Throttle: one zoom step per 80 ms regardless of device wheel speed
-      const now = Date.now();
-      if (now - _wheelLastT < 80) return;
-      _wheelLastT = now;
-
-      const bounds = gammaDataBounds();
-      const span = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
-
-      if (ev.shiftKey) {
-        const deltaDepth = Math.sign(ev.deltaY) * Math.max(0.5, span * 0.06);
-        const moved = clampGammaView(gammaViewport.d0 + deltaDepth, gammaViewport.d1 + deltaDepth, bounds);
-        gammaView.enabled = true;
-        gammaView.min = moved.min;
-        gammaView.max = moved.max;
-        drawGammaChart();
-        return;
-      }
-
-      // Zoom anchored to CENTER of viewport (not cursor) — prevents chart jumping down
-      const center = (gammaViewport.d0 + gammaViewport.d1) / 2;
-      const zoomFactor = ev.deltaY > 0 ? 1.08 : (1 / 1.08);
-      let newSpan = span * zoomFactor;
-      newSpan = Math.max(1.5, Math.min(10000, newSpan));
-      let newMin = center - newSpan / 2;
-      let newMax = center + newSpan / 2;
-      const clamped = clampGammaView(newMin, newMax, bounds);
-
-      gammaView.enabled = true;
-      gammaView.min = clamped.min;
-      gammaView.max = clamped.max;
-      drawGammaChart();
-    }, { passive: false });
-
-    gammaCanvas.addEventListener('mousedown', (ev) => {
-      if (!gammaViewport) return;
-      gammaDrag = {
-        y: ev.clientY,
-        d0: gammaViewport.d0,
-        d1: gammaViewport.d1,
-      };
-    });
-
-    window.addEventListener('mousemove', (ev) => {
-      if (!gammaDrag || !gammaViewport) return;
-      const dy = ev.clientY - gammaDrag.y;
-      const span = Math.max(1, gammaDrag.d1 - gammaDrag.d0);
-      const deltaDepth = (dy / gammaViewport.ph) * span;
-      const bounds = gammaDataBounds();
-      const moved = clampGammaView(gammaDrag.d0 + deltaDepth, gammaDrag.d1 + deltaDepth, bounds);
-      gammaView.enabled = true;
-      gammaView.min = moved.min;
-      gammaView.max = moved.max;
-      drawGammaChart();
-    });
-
-    window.addEventListener('mouseup', () => { gammaDrag = null; });
-    gammaCanvas.addEventListener('mouseleave', () => { gammaDrag = null; });
-    gammaCanvas.addEventListener('dblclick', () => {
-      gammaView.enabled = false;
-      gammaView.min = null;
-      gammaView.max = null;
-      drawGammaChart();
-    });
-
-    function applyZoomFactor(factor) {
-      if (!gammaViewport) return;
-      const bounds = gammaDataBounds();
-      const span = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
-      const center = (gammaViewport.d0 + gammaViewport.d1) / 2;
-      let newSpan = Math.max(2, Math.min(Math.max(1, bounds.max - bounds.min), span * factor));
-      let newMin = center - newSpan / 2;
-      let newMax = center + newSpan / 2;
-      const clamped = clampGammaView(newMin, newMax, bounds);
-      gammaView.enabled = true;
-      gammaView.min = clamped.min;
-      gammaView.max = clamped.max;
-      drawGammaChart();
-    }
-
-    zoomInBtn.addEventListener('click', () => applyZoomFactor(0.85));
-    zoomOutBtn.addEventListener('click', () => applyZoomFactor(1.15));
-    zoomResetBtn.addEventListener('click', () => {
-      gammaView.enabled = false;
-      gammaView.min = null;
-      gammaView.max = null;
-      drawGammaChart();
-    });
-
-    // Arrow keys: pan up/down 15% of current span
-    window.addEventListener('keydown', (ev) => {
-      if (!gammaViewport) return;
-      if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
-      ev.preventDefault();
-      const span   = Math.max(1, gammaViewport.d1 - gammaViewport.d0);
-      const step   = span * 0.15;
-      const delta  = ev.key === 'ArrowDown' ? step : -step;
-      const bounds = gammaDataBounds();
-      const moved  = clampGammaView(gammaViewport.d0 + delta, gammaViewport.d1 + delta, bounds);
-      gammaView.enabled = true;
-      gammaView.min = moved.min;
-      gammaView.max = moved.max;
-      drawGammaChart();
-    });
 
     loadHistory();
     pollState();
