@@ -654,10 +654,15 @@ function _loadHistory() {
     .then(r => r.json())
     .then(rows => {
       _rt = [];
+      const seen = new Set(); // Evitar duplicados
       rows.forEach(row => {
-        // Solo usar gamma_depth (no hole_depth) para evitar duplicación
-        if (row.gamma_depth != null && row.gamma != null) {
-          _rt.push({ depth: row.gamma_depth, gamma: row.gamma });
+        const d = row.gamma_depth ?? row.hole_depth;
+        if (d != null && row.gamma != null) {
+          const key = `${d.toFixed(2)}_${row.gamma.toFixed(2)}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            _rt.push({ depth: d, gamma: row.gamma });
+          }
         }
       });
       _rt.sort((a, b) => a.depth - b.depth);
