@@ -226,7 +226,7 @@
       : window.location.origin;
     const backendOrigin = (params.get('backend') || _defaultBackend).replace(/\/$/, '');
 
-    const MAX_GAMMA = 1085;  // 255 * 4.25
+    const MAX_GAMMA = 255;  // Valores ya vienen multiplicados x4.25 desde backend
     const GAMMA_WINDOW_M = 400;
     const GAMMA_BIN_M = 0.1;
     const gammaSeries = []; // [{depth, gamma}]
@@ -553,7 +553,7 @@
       ctx.textAlign = 'left';
       ctx.fillText('0', pad.left, pad.top - 8);
       ctx.textAlign = 'right';
-      ctx.fillText('1085', pad.left + pw, pad.top - 8);
+      ctx.fillText('255', pad.left + pw, pad.top - 8);
 
       ctx.save();
       ctx.translate(18, pad.top + ph / 2);
@@ -586,7 +586,7 @@
       ctx.moveTo(pad.left, y(gammaTrack[0].depth));
       for (const p of gammaTrack) {
         if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        ctx.lineTo(x(p.gamma * 4.25), y(p.depth));
+        ctx.lineTo(x(p.gamma), y(p.depth));
       }
       ctx.lineTo(pad.left, y(gammaTrack[gammaTrack.length - 1].depth));
       ctx.closePath();
@@ -600,7 +600,7 @@
       let started = false;
       for (const p of gammaTrack) {
         if (!Number.isFinite(p.depth) || !Number.isFinite(p.gamma)) continue;
-        const px = x(p.gamma * 4.25);
+        const px = x(p.gamma);
         const py = y(p.depth);
         if (!started) {
           ctx.moveTo(px, py);
