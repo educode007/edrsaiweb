@@ -282,7 +282,11 @@ def api_ingest():
         for key in ['hole_depth', 'gamma', 'gamma_depth', 'incl', 'azim', 'gTFA', 'mTFA']:
             if key in data and data[key] is not None:
                 try:
-                    _latest[key] = float(data[key])
+                    val = float(data[key])
+                    # Multiplicar gamma crudo por 4.25 (EDRsai envía valor raw)
+                    if key == 'gamma':
+                        val = round(val * 4.25, 2)
+                    _latest[key] = val
                 except (ValueError, TypeError):
                     pass
         if had_tfa:
